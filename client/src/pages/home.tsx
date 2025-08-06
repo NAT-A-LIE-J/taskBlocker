@@ -10,6 +10,7 @@ import { CompletedTasksDialog } from '@/components/CompletedTasksDialog';
 import { getCurrentWeekStart } from '@/lib/time-utils';
 import { useTimeBlocks } from '@/hooks/use-time-blocks';
 import { useStorage } from '@/hooks/use-storage';
+import { useTimeBlockMonitor } from '@/hooks/use-time-block-monitor';
 import { useTasks } from '@/hooks/use-tasks';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,9 @@ export default function Home() {
   const { createTimeBlock, updateTimeBlock, deleteTimeBlock, createBlockType, updateBlockType, deleteBlockType } = useTimeBlocks();
   const { toggleTaskCompletion, deleteTask, getCompletedTasks, deleteAllCompleted } = useTasks();
   const { toast } = useToast();
+  
+  // Enable time block monitoring for audio notifications
+  useTimeBlockMonitor();
   
   const [weekStart, setWeekStart] = useState(getCurrentWeekStart());
   const [calendarExpanded, setCalendarExpanded] = useState(false);
@@ -63,7 +67,10 @@ export default function Home() {
 
   const handleWeekChange = (direction: 'prev' | 'next') => {
     const offset = direction === 'next' ? 1 : -1;
-    setWeekStart(getCurrentWeekStart(getCurrentWeekStart().getTime() === weekStart.getTime() ? offset : 0));
+    const current = getCurrentWeekStart();
+    const newWeek = new Date(current);
+    newWeek.setDate(newWeek.getDate() + (offset * 7));
+    setWeekStart(newWeek);
   };
 
   const handleToggleCalendarExpansion = () => {

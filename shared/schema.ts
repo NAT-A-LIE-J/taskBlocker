@@ -97,6 +97,7 @@ export const appDataSchema = z.object({
   settings: z.object({
     darkMode: z.boolean().default(false),
     weekStartDay: z.number().default(0), // 0 = Sunday
+    audioNotifications: z.boolean().default(true),
     timeRange: z.object({
       start: z.string().default("07:00"),
       end: z.string().default("23:00"),

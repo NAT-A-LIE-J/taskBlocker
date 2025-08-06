@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Play, Moon, Sun, Settings } from 'lucide-react';
 import { formatWeekRange, getCurrentActiveBlock } from '@/lib/time-utils';
 import { useStorage } from '@/hooks/use-storage';
+import { SettingsModal } from './SettingsModal';
 
 interface HeaderProps {
   weekStart: Date;
@@ -22,6 +23,7 @@ export function Header({
   onOpenCompletedTasks 
 }: HeaderProps) {
   const { data } = useStorage();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   
   const activeBlock = getCurrentActiveBlock(data.timeBlocks, data.blockTypes);
   const currentBlockName = activeBlock ? activeBlock.blockType?.name : 'Focus';
@@ -82,13 +84,20 @@ export function Header({
         <Button
           variant="ghost"
           size="icon"
-          onClick={onOpenCompletedTasks}
+          onClick={() => setSettingsOpen(true)}
           className="touch-target"
           data-testid="button-settings"
         >
           <Settings className="w-4 h-4" />
         </Button>
       </div>
+      
+      <SettingsModal
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        darkMode={darkMode}
+        onToggleDarkMode={onToggleDarkMode}
+      />
     </header>
   );
 }

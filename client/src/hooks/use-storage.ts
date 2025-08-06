@@ -18,9 +18,15 @@ export function useStorage() {
     return () => clearInterval(backupInterval);
   }, []);
 
+  const updateSettings = (updates: Partial<AppData['settings']>) => {
+    storage.updateSettings(updates);
+    refreshData();
+  };
+
   return {
     data,
     refreshData,
     storage,
+    updateSettings,
   };
 }

@@ -33,6 +33,7 @@ const defaultAppData: AppData = {
   settings: {
     darkMode: false,
     weekStartDay: 0,
+    audioNotifications: true,
     timeRange: {
       start: '07:00',
       end: '23:00',
