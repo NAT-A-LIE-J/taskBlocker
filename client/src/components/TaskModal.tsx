@@ -6,7 +6,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Star } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Star, CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { format, setHours, setMinutes } from 'date-fns';
 import { useTasks } from '@/hooks/use-tasks';
 import { InsertTask } from '@shared/schema';
 
@@ -27,9 +31,12 @@ export function TaskModal({ isOpen, onClose, taskId }: TaskModalProps) {
     priority: existingTask?.priority || false,
     blockTypeId: existingTask?.blockTypeId,
     completed: existingTask?.completed || false,
+    archived: existingTask?.archived || false,
+    subtasks: existingTask?.subtasks || [],
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [deadlineDateOpen, setDeadlineDateOpen] = useState(false);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -40,6 +47,31 @@ export function TaskModal({ isOpen, onClose, taskId }: TaskModalProps) {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Helper functions for date/time handling
+  const formatDisplayDateTime = (date: Date | null | undefined) => {
+    if (!date) return 'Select deadline';
+    return format(date, 'MMM d, yyyy h:mm a');
+  };
+
+  const formatDateTimeForInput = (date: Date | null | undefined) => {
+    if (!date) return '';
+    return format(date, "yyyy-MM-dd'T'HH:mm");
+  };
+
+  const updateDeadlineDateTime = (date: Date, time?: string) => {
+    let newDate = new Date(date);
+    
+    if (time) {
+      const [hours, minutes] = time.split(':').map(Number);
+      newDate = setHours(setMinutes(newDate, minutes), hours);
+    }
+    
+    setFormData({
+      ...formData,
+      deadline: newDate
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -62,6 +94,8 @@ export function TaskModal({ isOpen, onClose, taskId }: TaskModalProps) {
         priority: false,
         blockTypeId: undefined,
         completed: false,
+        archived: false,
+        subtasks: [],
       });
       setErrors({});
       onClose();
@@ -78,22 +112,14 @@ export function TaskModal({ isOpen, onClose, taskId }: TaskModalProps) {
       priority: false,
       blockTypeId: undefined,
       completed: false,
+      archived: false,
+      subtasks: [],
     });
     setErrors({});
     onClose();
   };
 
-  const formatDateTimeLocal = (date?: Date): string => {
-    if (!date) return '';
-    const d = new Date(date);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().slice(0, 16);
-  };
 
-  const parseLocalDateTime = (value: string): Date | undefined => {
-    if (!value) return undefined;
-    return new Date(value);
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -178,18 +204,47 @@ export function TaskModal({ isOpen, onClose, taskId }: TaskModalProps) {
               <Label htmlFor="deadline" className="text-sm font-medium">
                 Deadline (Optional)
               </Label>
-              <Input
-                id="deadline"
-                type="datetime-local"
-                value={formatDateTimeLocal(formData.deadline)}
-                onChange={(e) => 
-                  setFormData({ 
-                    ...formData, 
-                    deadline: parseLocalDateTime(e.target.value)
-                  })
-                }
-                data-testid="input-deadline"
-              />
+              <div className="space-y-2">
+                <Popover open={deadlineDateOpen} onOpenChange={setDeadlineDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.deadline && "text-muted-foreground"
+                      )}
+                      data-testid="button-deadline-date-picker"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formatDisplayDateTime(formData.deadline)}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.deadline || undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const currentTime = formData.deadline ? format(formData.deadline, 'HH:mm') : '09:00';
+                          updateDeadlineDateTime(date, currentTime);
+                          setDeadlineDateOpen(false);
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  type="time"
+                  value={formData.deadline ? format(formData.deadline, 'HH:mm') : ''}
+                  onChange={(e) => {
+                    const currentDate = formData.deadline || new Date();
+                    updateDeadlineDateTime(currentDate, e.target.value);
+                  }}
+                  placeholder="09:00"
+                  data-testid="input-deadline-time"
+                />
+              </div>
             </div>
             
             <div className="flex items-end">
