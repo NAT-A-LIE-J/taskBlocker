@@ -149,6 +149,8 @@ export function hasDeadlineAtTimeSlot(tasks: any[], date: Date, timeSlot: string
   });
 }
 
+
+
 export function getTimeRemainingInBlock(activeBlock: any): number {
   const now = new Date();
   const currentTime = now.getHours() * 60 + now.getMinutes();

@@ -10,8 +10,8 @@ export function useTimeBlockMonitor() {
 
   useEffect(() => {
     const checkTimeBlockTransition = () => {
-      const activeBlock = getCurrentActiveBlock(data.timeBlocks, data.blockTypes);
-      const currentActiveBlockId = activeBlock ? activeBlock.id : null;
+      const activeBlockData = getCurrentActiveBlock(data.timeBlocks, data.blockTypes);
+      const currentActiveBlockId = activeBlockData ? activeBlockData.id : null;
 
       // Check if we've transitioned between blocks
       if (lastActiveBlockRef.current !== currentActiveBlockId) {
