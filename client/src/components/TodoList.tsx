@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Expand, Combine, Plus, Search, Filter, Star, AlertCircle, ChevronDown, ChevronRight, Edit3, Eye, EyeOff } from 'lucide-react';
+import { Expand, Combine, Plus, Search, Filter, Star, AlertCircle, ChevronDown, ChevronRight, Edit3, Eye, EyeOff, Check } from 'lucide-react';
 import { useTasks } from '@/hooks/use-tasks';
 import { Task } from '@shared/schema';
 import { cn } from '@/lib/utils';
@@ -123,7 +123,7 @@ export function TodoList({
   const unassignedTasks = filteredTasks.filter(task => !task.blockTypeId);
 
   const TaskItem = ({ task, blockType }: { task: Task; blockType?: any }) => {
-    const urgency = task.deadline ? getDeadlineUrgency(task.deadline) : null;
+    const urgency = task.deadline ? getDeadlineUrgency(task.deadline.toISOString()) : null;
     const isExpanded = expandedTasks.has(task.id);
     const isEditing = editingTasks.has(task.id);
     
@@ -161,6 +161,15 @@ export function TodoList({
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
                   {task.description}
                 </p>
+              )}
+              
+              {/* Subtask Progress Preview */}
+              {!isExpanded && task.subtasks && task.subtasks.length > 0 && (
+                <div className="flex items-center mt-1 text-xs text-gray-500">
+                  <span>
+                    {task.subtasks.filter(st => st.completed).length} / {task.subtasks.length} subtasks
+                  </span>
+                </div>
               )}
               
               {/* Basic Info Row */}
@@ -304,6 +313,40 @@ export function TodoList({
                           minute: '2-digit',
                         })}
                       </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Subtasks Display */}
+                {task.subtasks && task.subtasks.length > 0 && (
+                  <div>
+                    <span className="font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                      Subtasks ({task.subtasks.filter(st => st.completed).length}/{task.subtasks.length})
+                    </span>
+                    <div className="space-y-1">
+                      {task.subtasks.map((subtask) => (
+                        <div
+                          key={subtask.id}
+                          className="flex items-center space-x-2 text-sm"
+                          data-testid={`subtask-display-${subtask.id}`}
+                        >
+                          <div className={cn(
+                            "w-4 h-4 rounded border-2 flex items-center justify-center",
+                            subtask.completed 
+                              ? "bg-green-500 border-green-500" 
+                              : "border-gray-300 dark:border-gray-600"
+                          )}>
+                            {subtask.completed && (
+                              <Check className="w-2.5 h-2.5 text-white" />
+                            )}
+                          </div>
+                          <span className={cn(
+                            subtask.completed && "line-through text-gray-500"
+                          )}>
+                            {subtask.title}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

@@ -34,6 +34,22 @@ export const insertTimeBlockSchema = timeBlockSchema.omit({
 export type TimeBlock = z.infer<typeof timeBlockSchema>;
 export type InsertTimeBlock = z.infer<typeof insertTimeBlockSchema>;
 
+// Subtasks
+export const subtaskSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  completed: z.boolean().default(false),
+  createdAt: z.date(),
+});
+
+export const insertSubtaskSchema = subtaskSchema.omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Subtask = z.infer<typeof subtaskSchema>;
+export type InsertSubtask = z.infer<typeof insertSubtaskSchema>;
+
 // Tasks
 export const taskSchema = z.object({
   id: z.string(),
@@ -43,6 +59,7 @@ export const taskSchema = z.object({
   priority: z.boolean().default(false),
   blockTypeId: z.string().optional(),
   completed: z.boolean().default(false),
+  subtasks: z.array(subtaskSchema).default([]),
   createdAt: z.date(),
 });
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,15 +6,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DayPicker } from 'react-day-picker';
-import { CalendarIcon, Check, X } from 'lucide-react';
+import { CalendarIcon, Check, X, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
-import { Task, BlockType, insertTaskSchema } from '@shared/schema';
+import { Task, BlockType, insertTaskSchema, Subtask } from '@shared/schema';
 import { z } from 'zod';
+import { nanoid } from 'nanoid';
 
 const editTaskSchema = insertTaskSchema.extend({
   id: z.string(),
@@ -30,6 +32,9 @@ interface TaskEditFormProps {
 }
 
 export function TaskEditForm({ task, blockTypes, onSave, onCancel }: TaskEditFormProps) {
+  const [subtasks, setSubtasks] = useState<Subtask[]>(task.subtasks || []);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+
   const form = useForm<EditTaskData>({
     resolver: zodResolver(editTaskSchema),
     defaultValues: {
@@ -44,7 +49,40 @@ export function TaskEditForm({ task, blockTypes, onSave, onCancel }: TaskEditFor
 
   const handleSubmit = (data: EditTaskData) => {
     const { id, ...updateData } = data;
-    onSave(updateData);
+    onSave({ ...updateData, subtasks });
+  };
+
+  const addSubtask = () => {
+    if (newSubtaskTitle.trim()) {
+      const newSubtask: Subtask = {
+        id: nanoid(),
+        title: newSubtaskTitle.trim(),
+        completed: false,
+        createdAt: new Date(),
+      };
+      setSubtasks([...subtasks, newSubtask]);
+      setNewSubtaskTitle('');
+    }
+  };
+
+  const toggleSubtask = (subtaskId: string) => {
+    setSubtasks(subtasks.map(subtask => 
+      subtask.id === subtaskId 
+        ? { ...subtask, completed: !subtask.completed }
+        : subtask
+    ));
+  };
+
+  const deleteSubtask = (subtaskId: string) => {
+    setSubtasks(subtasks.filter(subtask => subtask.id !== subtaskId));
+  };
+
+  const updateSubtaskTitle = (subtaskId: string, newTitle: string) => {
+    setSubtasks(subtasks.map(subtask => 
+      subtask.id === subtaskId 
+        ? { ...subtask, title: newTitle }
+        : subtask
+    ));
   };
 
   return (
@@ -188,6 +226,67 @@ export function TaskEditForm({ task, blockTypes, onSave, onCancel }: TaskEditFor
               </FormItem>
             )}
           />
+
+          {/* Subtasks Section */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Subtasks</Label>
+            
+            {/* Existing Subtasks */}
+            <div className="space-y-2">
+              {subtasks.map((subtask) => (
+                <div 
+                  key={subtask.id}
+                  className="flex items-center space-x-2 p-2 bg-white dark:bg-gray-700 rounded border"
+                >
+                  <Checkbox
+                    checked={subtask.completed}
+                    onCheckedChange={() => toggleSubtask(subtask.id)}
+                    data-testid={`checkbox-subtask-${subtask.id}`}
+                  />
+                  <Input
+                    value={subtask.title}
+                    onChange={(e) => updateSubtaskTitle(subtask.id, e.target.value)}
+                    className={cn(
+                      "flex-1 border-none shadow-none focus:ring-0",
+                      subtask.completed && "line-through text-gray-500"
+                    )}
+                    data-testid={`input-subtask-title-${subtask.id}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteSubtask(subtask.id)}
+                    className="text-red-500 hover:text-red-700"
+                    data-testid={`button-delete-subtask-${subtask.id}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add New Subtask */}
+            <div className="flex items-center space-x-2">
+              <Input
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                placeholder="Add a subtask..."
+                onKeyPress={(e) => e.key === 'Enter' && addSubtask()}
+                data-testid="input-new-subtask"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addSubtask}
+                disabled={!newSubtaskTitle.trim()}
+                data-testid="button-add-subtask"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
 
           <div className="flex justify-end space-x-2 pt-2">
             <Button 

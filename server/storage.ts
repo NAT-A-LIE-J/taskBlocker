@@ -60,7 +60,50 @@ export class MemStorage implements IStorage {
       },
     ];
 
+    const studyBlockId = defaultBlockTypes[0].id;
+    
+    // Add sample tasks with subtasks
+    const defaultTasks: Task[] = [
+      {
+        id: randomUUID(),
+        title: 'Complete React Project',
+        description: 'Build a time-blocking application',
+        deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+        priority: true,
+        blockTypeId: studyBlockId,
+        completed: false,
+        subtasks: [
+          {
+            id: randomUUID(),
+            title: 'Set up project structure',
+            completed: true,
+            createdAt: new Date(),
+          },
+          {
+            id: randomUUID(),
+            title: 'Design UI components',
+            completed: false,
+            createdAt: new Date(),
+          },
+          {
+            id: randomUUID(),
+            title: 'Implement task management',
+            completed: false,
+            createdAt: new Date(),
+          },
+          {
+            id: randomUUID(),
+            title: 'Add subtask functionality',
+            completed: false,
+            createdAt: new Date(),
+          },
+        ],
+        createdAt: new Date(),
+      },
+    ];
+
     defaultBlockTypes.forEach(bt => this.blockTypes.set(bt.id, bt));
+    defaultTasks.forEach(task => this.tasks.set(task.id, task));
   }
 
   // Block Types
