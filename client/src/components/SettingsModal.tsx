@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Volume2, VolumeX, TestTube, Archive, Trash2, RotateCcw, Calendar } from 'lucide-react';
+import { Volume2, VolumeX, TestTube, Archive, Trash2, RotateCcw, Calendar, Download, Upload, Database } from 'lucide-react';
 import { useAudioNotifications } from '@/hooks/use-audio-notifications';
 import { useStorage } from '@/hooks/use-storage';
 import { useToast } from '@/hooks/use-toast';
@@ -35,11 +35,15 @@ export function SettingsModal({
     getArchivedTasks, 
     unarchiveTask, 
     deleteArchivedTasks, 
-    storage 
+    storage,
+    exportJsonData,
+    importJsonData,
+    restoreBackup
   } = useStorage();
   
   const { toast } = useToast();
   const [expandedArchiveSection, setExpandedArchiveSection] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   
   const archivedTasks = getArchivedTasks();
   
@@ -56,6 +60,45 @@ export function SettingsModal({
     toast({
       title: "Archived tasks deleted",
       description: `${count} archived ${count === 1 ? 'task' : 'tasks'} permanently deleted`,
+    });
+  };
+
+  const handleExportData = () => {
+    const result = exportJsonData();
+    toast({
+      title: result.success ? "Export successful" : "Export failed",
+      description: result.message,
+      variant: result.success ? "default" : "destructive",
+    });
+  };
+
+  const handleImportData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const result = await importJsonData(file);
+      toast({
+        title: result.success ? "Import successful" : "Import failed",
+        description: result.stats ? 
+          `Imported ${result.stats.blockTypes} block types, ${result.stats.timeBlocks} time blocks, ${result.stats.tasks} tasks, ${result.stats.events} events` : 
+          result.message,
+        variant: result.success ? "default" : "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+      // Reset the input value to allow reimporting the same file
+      event.target.value = '';
+    }
+  };
+
+  const handleRestoreBackup = () => {
+    const success = restoreBackup();
+    toast({
+      title: success ? "Backup restored" : "Restore failed",
+      description: success ? "Your data has been restored from backup" : "No backup available or restore failed",
+      variant: success ? "default" : "destructive",
     });
   };
 
@@ -124,6 +167,98 @@ export function SettingsModal({
               <li>• Automatic detection of schedule changes</li>
               <li>• Works only when browser tab is active</li>
             </ul>
+          </div>
+
+          <Separator />
+
+          {/* Data Management Section */}
+          <div className="space-y-4">
+            <div className="space-y-0.5">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                Data Management
+              </Label>
+              <div className="text-sm text-muted-foreground">
+                Export, import, and backup your data
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              {/* Export Data */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportData}
+                className="justify-start"
+                data-testid="button-export-data"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export All Data
+              </Button>
+
+              {/* Import Data */}
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportData}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={isImporting}
+                  data-testid="input-import-file"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isImporting}
+                  className="w-full justify-start"
+                  data-testid="button-import-data"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {isImporting ? 'Importing...' : 'Import Data'}
+                </Button>
+              </div>
+
+              {/* Restore Backup */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="justify-start"
+                    data-testid="button-restore-backup"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Restore from Backup
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Restore from Backup?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will replace your current data with the most recent backup. 
+                      Any changes since the backup was created will be lost.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleRestoreBackup}>
+                      Restore Backup
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+
+            {/* Data Management Information */}
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-4">
+              <h4 className="text-sm font-medium mb-2">Data Management Features</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Export: Download all your data as JSON file</li>
+                <li>• Import: Upload JSON file to restore data</li>
+                <li>• Auto-backup: Creates backup weekly</li>
+                <li>• Data validation: Checks integrity on startup</li>
+              </ul>
+            </div>
           </div>
 
           <Separator />
