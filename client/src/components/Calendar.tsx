@@ -264,13 +264,14 @@ export function Calendar({
                       return isEventStart && (
                         <div
                           key={`event-${event.id}-${dayIndex}-${time}`}
-                          className="absolute inset-x-1 rounded-md p-1 text-white text-xs z-20 shadow-sm border border-opacity-30"
+                          className="absolute rounded-md p-1 text-white text-xs z-20 shadow-sm border border-opacity-30"
                           style={{
                             backgroundColor: event.color,
                             borderColor: event.color,
                             height: `${eventHeight}px`,
                             top: '2px',
-                            right: timeBlock ? '50%' : '2px', // If there's a time block, take only half the width
+                            right: '2px',
+                            left: '50%', // Always position events on the right half
                           }}
                           title={`${event.title}${event.description ? ': ' + event.description : ''}`}
                           data-testid={`event-${event.id}`}
