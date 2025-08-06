@@ -5,6 +5,7 @@ import { TodoList } from '@/components/TodoList';
 import { TimerModal } from '@/components/TimerModal';
 import { TaskModal } from '@/components/TaskModal';
 import { TimeBlockEditDialog } from '@/components/TimeBlockEditDialog';
+import { FocusTimer } from '@/components/FocusTimer';
 import { getCurrentWeekStart } from '@/lib/time-utils';
 import { useTimeBlocks } from '@/hooks/use-time-blocks';
 import { useStorage } from '@/hooks/use-storage';
@@ -23,8 +24,10 @@ export default function Home() {
   const [timerModalOpen, setTimerModalOpen] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [timeBlockEditOpen, setTimeBlockEditOpen] = useState(false);
+  const [focusTimerOpen, setFocusTimerOpen] = useState(false);
   const [selectedBlockTypeId, setSelectedBlockTypeId] = useState<string>();
   const [editingTimeBlock, setEditingTimeBlock] = useState<TimeBlock | null>(null);
+  const [currentActiveBlock, setCurrentActiveBlock] = useState<TimeBlock | null>(null);
 
   // Theme management
   const [darkMode, setDarkMode] = useState(data.settings.darkMode);
@@ -74,7 +77,24 @@ export default function Home() {
   };
 
   const handleStartTimer = () => {
-    setTimerModalOpen(true);
+    // Find the current active time block
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = Sunday
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    
+    const activeBlock = data.timeBlocks.find(block => {
+      return block.dayOfWeek === currentDay && 
+             block.startTime <= currentTime && 
+             block.endTime > currentTime;
+    });
+    
+    if (activeBlock) {
+      setCurrentActiveBlock(activeBlock);
+      setFocusTimerOpen(true);
+    } else {
+      // Fallback to timer modal if no active block
+      setTimerModalOpen(true);
+    }
   };
 
   const handleTimeBlockClick = useCallback((blockId: string) => {
@@ -224,6 +244,18 @@ export default function Home() {
         blockTypes={data.blockTypes}
         onUpdate={handleTimeBlockUpdate}
         onDelete={handleTimeBlockDelete}
+      />
+
+      <FocusTimer
+        isOpen={focusTimerOpen}
+        onClose={() => {
+          setFocusTimerOpen(false);
+          setCurrentActiveBlock(null);
+        }}
+        currentBlock={currentActiveBlock}
+        blockType={currentActiveBlock ? data.blockTypes.find(bt => bt.id === currentActiveBlock.blockTypeId) || null : null}
+        tasks={data.tasks}
+        weekStart={weekStart}
       />
     </div>
   );
