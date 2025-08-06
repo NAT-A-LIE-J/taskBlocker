@@ -207,10 +207,7 @@ export function Calendar({
                         <div className="text-xs font-medium" style={{ color: blockType.color }}>
                           {blockType.name}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {formatTime12Hour(timeBlock.startTime)} - {formatTime12Hour(timeBlock.endTime)}
-                        </div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-xs text-gray-400 mt-1">
                           {blockTasks.length} task{blockTasks.length !== 1 ? 's' : ''}
                         </div>
                         {blockTasks.some(task => task.priority) && (
