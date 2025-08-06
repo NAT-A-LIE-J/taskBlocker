@@ -293,7 +293,7 @@ export function Calendar({
                     {/* Deadline Indicator - Always show when there's a deadline */}
                     {hasDeadline && (
                       <div
-                        className="absolute w-2 h-2 bg-red-500 rounded-full animate-pulse z-30"
+                        className="absolute w-2 h-2 bg-red-500 rounded-full z-30"
                         style={{
                           top: '4px',
                           left: '4px',
