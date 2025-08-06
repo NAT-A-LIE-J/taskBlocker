@@ -52,7 +52,7 @@ Currently no authentication system implemented - designed as a personal producti
 - **Universal Tasks**: Tasks without specific block type assignments are treated as universal tasks and displayed during buffer time periods
 - **Audio Notifications**: Pleasant chime sounds alert users when time blocks start and end, with customizable mute settings
 - **Subtask Management**: Tasks can be broken down into smaller trackable subtasks with individual completion status and progress indicators
-- **Task Archiving**: Tasks can be archived for later reference and permanently deleted from the archive, with restore functionality
+- **Task Archiving**: Tasks are automatically archived when completed, and can also be manually archived for later reference. Archived tasks can be restored or permanently deleted from the archive
 
 ## External Dependencies
 

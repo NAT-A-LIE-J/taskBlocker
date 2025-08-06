@@ -41,16 +41,28 @@ export function useTasks() {
     const task = data.tasks.find(t => t.id === id);
     if (!task) return null;
 
+    const isCompleting = !task.completed;
+    
     const updated = storage.updateTask(id, { 
-      completed: !task.completed,
-      completedAt: !task.completed ? new Date() : undefined
+      completed: isCompleting,
+      completedAt: isCompleting ? new Date() : undefined
     });
+    
     if (updated) {
+      // If task is being completed, archive it automatically
+      if (isCompleting) {
+        storage.archiveTask(id);
+        toast({
+          title: "Task completed and archived",
+          description: `"${updated.title}" moved to archive`,
+        });
+      } else {
+        toast({
+          title: "Task reopened",
+          description: "Task marked as incomplete.",
+        });
+      }
       refreshData();
-      toast({
-        title: updated.completed ? "Task completed" : "Task reopened",
-        description: updated.completed ? "Great job!" : "Task marked as incomplete.",
-      });
     }
     return updated;
   }, [data.tasks, storage, refreshData, toast]);
