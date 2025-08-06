@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, ChevronDown, ChevronRight, Plus, Edit, Trash2, Clock } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronRight, Plus, Edit, Trash2, Clock, CalendarIcon } from 'lucide-react';
 import { useEvents } from '@/hooks/use-events';
 import { Event, InsertEvent } from '@shared/schema';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parse, setHours, setMinutes } from 'date-fns';
 
 interface EventManagerProps {
   isCollapsed?: boolean;
@@ -22,6 +24,8 @@ export function EventManager({ isCollapsed = false, onToggleCollapse }: EventMan
   const { events, createEvent, updateEvent, deleteEvent } = useEvents();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -42,6 +46,38 @@ export function EventManager({ isCollapsed = false, onToggleCollapse }: EventMan
       allDay: false,
     });
     setEditingEvent(null);
+    setStartDateOpen(false);
+    setEndDateOpen(false);
+  };
+
+  // Helper functions for date/time handling
+  const parseDateTime = (dateTimeString: string) => {
+    if (!dateTimeString) return null;
+    return new Date(dateTimeString);
+  };
+
+  const formatDateTime = (date: Date | null) => {
+    if (!date) return '';
+    return format(date, "yyyy-MM-dd'T'HH:mm");
+  };
+
+  const formatDisplayDateTime = (date: Date | null) => {
+    if (!date) return 'Select date & time';
+    return format(date, 'MMM d, yyyy h:mm a');
+  };
+
+  const updateDateTime = (field: 'startTime' | 'endTime', date: Date, time?: string) => {
+    let newDate = new Date(date);
+    
+    if (time) {
+      const [hours, minutes] = time.split(':').map(Number);
+      newDate = setHours(setMinutes(newDate, minutes), hours);
+    }
+    
+    setFormData({
+      ...formData,
+      [field]: formatDateTime(newDate)
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -169,26 +205,94 @@ export function EventManager({ isCollapsed = false, onToggleCollapse }: EventMan
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="event-start">Start Time</Label>
-                      <Input
-                        id="event-start"
-                        type="datetime-local"
-                        value={formData.startTime}
-                        onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                        required
-                        data-testid="input-event-start"
-                      />
+                      <div className="space-y-2">
+                        <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !formData.startTime && "text-muted-foreground"
+                              )}
+                              data-testid="button-start-date-picker"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {formatDisplayDateTime(parseDateTime(formData.startTime))}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={parseDateTime(formData.startTime) || undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  const currentTime = parseDateTime(formData.startTime);
+                                  const timeString = currentTime ? format(currentTime, 'HH:mm') : '09:00';
+                                  updateDateTime('startTime', date, timeString);
+                                  setStartDateOpen(false);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Input
+                          type="time"
+                          value={parseDateTime(formData.startTime) ? format(parseDateTime(formData.startTime)!, 'HH:mm') : ''}
+                          onChange={(e) => {
+                            const currentDate = parseDateTime(formData.startTime) || new Date();
+                            updateDateTime('startTime', currentDate, e.target.value);
+                          }}
+                          placeholder="09:00"
+                          data-testid="input-event-start-time"
+                        />
+                      </div>
                     </div>
                     
                     <div>
                       <Label htmlFor="event-end">End Time</Label>
-                      <Input
-                        id="event-end"
-                        type="datetime-local"
-                        value={formData.endTime}
-                        onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                        required
-                        data-testid="input-event-end"
-                      />
+                      <div className="space-y-2">
+                        <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !formData.endTime && "text-muted-foreground"
+                              )}
+                              data-testid="button-end-date-picker"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {formatDisplayDateTime(parseDateTime(formData.endTime))}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={parseDateTime(formData.endTime) || undefined}
+                              onSelect={(date) => {
+                                if (date) {
+                                  const currentTime = parseDateTime(formData.endTime);
+                                  const timeString = currentTime ? format(currentTime, 'HH:mm') : '10:00';
+                                  updateDateTime('endTime', date, timeString);
+                                  setEndDateOpen(false);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Input
+                          type="time"
+                          value={parseDateTime(formData.endTime) ? format(parseDateTime(formData.endTime)!, 'HH:mm') : ''}
+                          onChange={(e) => {
+                            const currentDate = parseDateTime(formData.endTime) || parseDateTime(formData.startTime) || new Date();
+                            updateDateTime('endTime', currentDate, e.target.value);
+                          }}
+                          placeholder="10:00"
+                          data-testid="input-event-end-time"
+                        />
+                      </div>
                     </div>
                   </div>
                   
