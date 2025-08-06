@@ -7,14 +7,25 @@ import { useTasks } from '@/hooks/use-tasks';
 import { Task } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { getDeadlineUrgency } from '@/lib/time-utils';
+import { BlockTypeManager } from './BlockTypeManager';
 
 interface TodoListProps {
   isExpanded: boolean;
   onToggleExpansion: () => void;
   onAddTask: () => void;
+  onCreateBlockType: (data: { name: string; color: string }) => any;
+  onUpdateBlockType: (id: string, data: { name: string; color: string }) => any;
+  onDeleteBlockType: (id: string) => boolean;
 }
 
-export function TodoList({ isExpanded, onToggleExpansion, onAddTask }: TodoListProps) {
+export function TodoList({ 
+  isExpanded, 
+  onToggleExpansion, 
+  onAddTask, 
+  onCreateBlockType, 
+  onUpdateBlockType, 
+  onDeleteBlockType 
+}: TodoListProps) {
   const { tasks, blockTypes, toggleTaskCompletion } = useTasks();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBlockType, setSelectedBlockType] = useState<string>('all');
@@ -210,6 +221,16 @@ export function TodoList({ isExpanded, onToggleExpansion, onAddTask }: TodoListP
             <Filter className="w-4 h-4 text-gray-400" />
           </Button>
         </div>
+      </div>
+      
+      {/* Block Type Manager */}
+      <div className="border-b border-gray-100 dark:border-gray-700 p-4">
+        <BlockTypeManager
+          blockTypes={blockTypes}
+          onCreateBlockType={onCreateBlockType}
+          onUpdateBlockType={onUpdateBlockType}
+          onDeleteBlockType={onDeleteBlockType}
+        />
       </div>
       
       {/* Task List */}

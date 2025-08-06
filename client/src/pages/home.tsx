@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from '@/components/Header';
 import { Calendar } from '@/components/Calendar';
 import { TodoList } from '@/components/TodoList';
 import { TimerModal } from '@/components/TimerModal';
 import { TaskModal } from '@/components/TaskModal';
+import { TimeBlockEditDialog } from '@/components/TimeBlockEditDialog';
 import { getCurrentWeekStart } from '@/lib/time-utils';
 import { useTimeBlocks } from '@/hooks/use-time-blocks';
 import { useStorage } from '@/hooks/use-storage';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { TimeBlock } from '@shared/schema';
 
 export default function Home() {
   const { data, storage } = useStorage();
-  const { createTimeBlock } = useTimeBlocks();
+  const { createTimeBlock, updateTimeBlock, deleteTimeBlock, createBlockType, updateBlockType, deleteBlockType } = useTimeBlocks();
   const { toast } = useToast();
   
   const [weekStart, setWeekStart] = useState(getCurrentWeekStart());
@@ -20,7 +22,9 @@ export default function Home() {
   const [todoExpanded, setTodoExpanded] = useState(false);
   const [timerModalOpen, setTimerModalOpen] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [timeBlockEditOpen, setTimeBlockEditOpen] = useState(false);
   const [selectedBlockTypeId, setSelectedBlockTypeId] = useState<string>();
+  const [editingTimeBlock, setEditingTimeBlock] = useState<TimeBlock | null>(null);
 
   // Theme management
   const [darkMode, setDarkMode] = useState(data.settings.darkMode);
@@ -73,13 +77,21 @@ export default function Home() {
     setTimerModalOpen(true);
   };
 
-  const handleTimeBlockClick = (blockId: string) => {
+  const handleTimeBlockClick = useCallback((blockId: string) => {
     const timeBlock = data.timeBlocks.find(tb => tb.id === blockId);
     if (timeBlock) {
-      setSelectedBlockTypeId(timeBlock.blockTypeId);
-      setTimerModalOpen(true);
+      setEditingTimeBlock(timeBlock);
+      setTimeBlockEditOpen(true);
     }
-  };
+  }, [data.timeBlocks]);
+
+  const handleTimeBlockUpdate = useCallback((id: string, updates: { blockTypeId?: string; startTime?: string; endTime?: string }) => {
+    updateTimeBlock(id, updates);
+  }, [updateTimeBlock]);
+
+  const handleTimeBlockDelete = useCallback((id: string) => {
+    deleteTimeBlock(id);
+  }, [deleteTimeBlock]);
 
   const handleCreateTimeBlock = (blockData: { dayOfWeek: number; startTime: string; endTime: string }) => {
     // For now, create with first available block type
@@ -107,6 +119,19 @@ export default function Home() {
     setDarkMode(!darkMode);
     localStorage.setItem('timeblock-dark-mode', (!darkMode).toString());
   };
+
+  // Block Type management handlers
+  const handleCreateBlockType = useCallback((data: { name: string; color: string }) => {
+    return createBlockType(data);
+  }, [createBlockType]);
+
+  const handleUpdateBlockType = useCallback((id: string, data: { name: string; color: string }) => {
+    return updateBlockType(id, data);
+  }, [updateBlockType]);
+
+  const handleDeleteBlockType = useCallback((id: string) => {
+    return deleteBlockType(id);
+  }, [deleteBlockType]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -167,6 +192,9 @@ export default function Home() {
             isExpanded={todoExpanded}
             onToggleExpansion={handleToggleTodoExpansion}
             onAddTask={handleAddTask}
+            onCreateBlockType={handleCreateBlockType}
+            onUpdateBlockType={handleUpdateBlockType}
+            onDeleteBlockType={handleDeleteBlockType}
           />
         </div>
       </main>
@@ -184,6 +212,18 @@ export default function Home() {
       <TaskModal
         isOpen={taskModalOpen}
         onClose={() => setTaskModalOpen(false)}
+      />
+      
+      <TimeBlockEditDialog
+        isOpen={timeBlockEditOpen}
+        onClose={() => {
+          setTimeBlockEditOpen(false);
+          setEditingTimeBlock(null);
+        }}
+        timeBlock={editingTimeBlock}
+        blockTypes={data.blockTypes}
+        onUpdate={handleTimeBlockUpdate}
+        onDelete={handleTimeBlockDelete}
       />
     </div>
   );
