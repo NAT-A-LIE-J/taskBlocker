@@ -41,7 +41,10 @@ export function useTasks() {
     const task = data.tasks.find(t => t.id === id);
     if (!task) return null;
 
-    const updated = storage.updateTask(id, { completed: !task.completed });
+    const updated = storage.updateTask(id, { 
+      completed: !task.completed,
+      completedAt: !task.completed ? new Date() : undefined
+    });
     if (updated) {
       refreshData();
       toast({
@@ -51,6 +54,19 @@ export function useTasks() {
     }
     return updated;
   }, [data.tasks, storage, refreshData, toast]);
+
+  const archiveTask = useCallback((id: string): boolean => {
+    const success = storage.archiveTask(id);
+    if (success) {
+      refreshData();
+      const task = data.tasks.find(t => t.id === id);
+      toast({
+        title: "Task archived",
+        description: task ? `"${task.title}" moved to archive` : "Task archived",
+      });
+    }
+    return success;
+  }, [storage, refreshData, data.tasks, toast]);
 
   const getTasksByBlockType = useCallback((blockTypeId?: string) => {
     return data.tasks.filter(task => task.blockTypeId === blockTypeId);
@@ -79,12 +95,13 @@ export function useTasks() {
   }, [data.tasks, storage, refreshData, toast]);
 
   return {
-    tasks: data.tasks,
+    tasks: data.tasks.filter(t => !t.archived),
     blockTypes: data.blockTypes,
     createTask,
     updateTask,
     deleteTask,
     toggleTaskCompletion,
+    archiveTask,
     getTasksByBlockType,
     getPriorityTasks,
     getUnassignedTasks,

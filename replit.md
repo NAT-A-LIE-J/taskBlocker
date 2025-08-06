@@ -30,8 +30,9 @@ Preferred communication style: Simple, everyday language.
 - **Primary Storage**: Browser localStorage for immediate data persistence
 - **Schema Management**: Drizzle ORM with PostgreSQL dialect for potential database integration
 - **Backup Strategy**: Automatic JSON export to Downloads folder (weekly intervals)
-- **Data Models**: Strongly typed schemas using Zod validation for BlockTypes, TimeBlocks, Tasks, and TimerSessions
-- **Storage Interface**: Abstract storage layer with in-memory implementation for development
+- **Data Models**: Strongly typed schemas using Zod validation for BlockTypes, TimeBlocks, Tasks (with subtasks and archiving), and TimerSessions
+- **Storage Interface**: Abstract storage layer with comprehensive task lifecycle management including archiving and restoration
+- **Settings Management**: Persistent user preferences including audio notifications and theme settings
 
 ### Authentication and Authorization
 Currently no authentication system implemented - designed as a personal productivity app with local data storage.
@@ -49,6 +50,9 @@ Currently no authentication system implemented - designed as a personal producti
 - **Timer Functionality**: Built-in focus timer that integrates with active time blocks
 - **Buffer Time System**: When no time block is scheduled, the system automatically creates "Buffer Time" periods that count down until the next scheduled block
 - **Universal Tasks**: Tasks without specific block type assignments are treated as universal tasks and displayed during buffer time periods
+- **Audio Notifications**: Pleasant chime sounds alert users when time blocks start and end, with customizable mute settings
+- **Subtask Management**: Tasks can be broken down into smaller trackable subtasks with individual completion status and progress indicators
+- **Task Archiving**: Tasks can be archived for later reference and permanently deleted from the archive, with restore functionality
 
 ## External Dependencies
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Expand, Combine, Plus, Search, Filter, Star, AlertCircle, ChevronDown, ChevronRight, Edit3, Eye, EyeOff, Check } from 'lucide-react';
+import { Expand, Combine, Plus, Search, Filter, Star, AlertCircle, ChevronDown, ChevronRight, Edit3, Eye, EyeOff, Check, Archive } from 'lucide-react';
 import { useTasks } from '@/hooks/use-tasks';
 import { Task } from '@shared/schema';
 import { cn } from '@/lib/utils';
@@ -27,7 +27,7 @@ export function TodoList({
   onUpdateBlockType, 
   onDeleteBlockType 
 }: TodoListProps) {
-  const { tasks, blockTypes, toggleTaskCompletion, updateTask } = useTasks();
+  const { tasks, blockTypes, toggleTaskCompletion, updateTask, archiveTask } = useTasks();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBlockType, setSelectedBlockType] = useState<string>('all');
   const [isBlockTypesCollapsed, setIsBlockTypesCollapsed] = useState(false);
@@ -215,18 +215,33 @@ export function TodoList({
             {/* Action Buttons */}
             <div className="flex items-center space-x-1 ml-3 shrink-0">
               {isExpanded && !isEditing && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleTaskEditing(task.id);
-                  }}
-                  data-testid={`button-edit-${task.id}`}
-                >
-                  <Edit3 className="w-3 h-3" />
-                </Button>
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      archiveTask(task.id);
+                    }}
+                    data-testid={`button-archive-${task.id}`}
+                    title="Archive task"
+                  >
+                    <Archive className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-blue-500 hover:text-blue-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleTaskEditing(task.id);
+                    }}
+                    data-testid={`button-edit-${task.id}`}
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </Button>
+                </>
               )}
               
               <Button

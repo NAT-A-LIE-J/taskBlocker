@@ -59,8 +59,11 @@ export const taskSchema = z.object({
   priority: z.boolean().default(false),
   blockTypeId: z.string().optional(),
   completed: z.boolean().default(false),
+  archived: z.boolean().default(false),
   subtasks: z.array(subtaskSchema).default([]),
   createdAt: z.date(),
+  completedAt: z.date().optional(),
+  archivedAt: z.date().optional(),
 });
 
 export const insertTaskSchema = taskSchema.omit({

@@ -23,10 +23,34 @@ export function useStorage() {
     refreshData();
   };
 
+  const archiveTask = (taskId: string) => {
+    storage.archiveTask(taskId);
+    refreshData();
+  };
+
+  const unarchiveTask = (taskId: string) => {
+    storage.unarchiveTask(taskId);
+    refreshData();
+  };
+
+  const deleteArchivedTasks = () => {
+    const count = storage.deleteArchivedTasks();
+    refreshData();
+    return count;
+  };
+
+  const getArchivedTasks = () => {
+    return storage.getArchivedTasks();
+  };
+
   return {
     data,
     refreshData,
     storage,
     updateSettings,
+    archiveTask,
+    unarchiveTask,
+    deleteArchivedTasks,
+    getArchivedTasks,
   };
 }

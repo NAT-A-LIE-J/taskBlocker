@@ -197,6 +197,43 @@ export class StorageService {
     return true;
   }
 
+  archiveTask(id: string): boolean {
+    const index = this.data.tasks.findIndex(t => t.id === id);
+    if (index === -1) return false;
+    
+    this.data.tasks[index] = { 
+      ...this.data.tasks[index], 
+      archived: true,
+      archivedAt: new Date()
+    };
+    this.saveData();
+    return true;
+  }
+
+  unarchiveTask(id: string): boolean {
+    const index = this.data.tasks.findIndex(t => t.id === id);
+    if (index === -1) return false;
+    
+    this.data.tasks[index] = { 
+      ...this.data.tasks[index], 
+      archived: false,
+      archivedAt: undefined
+    };
+    this.saveData();
+    return true;
+  }
+
+  getArchivedTasks(): Task[] {
+    return this.data.tasks.filter(task => task.archived);
+  }
+
+  deleteArchivedTasks(): number {
+    const archivedCount = this.data.tasks.filter(task => task.archived).length;
+    this.data.tasks = this.data.tasks.filter(task => !task.archived);
+    this.saveData();
+    return archivedCount;
+  }
+
   // Timer Sessions
   getTimerSessions(): TimerSession[] {
     return this.data.timerSessions;
