@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Expand, Combine, Plus, Search, Filter, Star, AlertCircle } from 'lucide-react';
+import { Expand, Combine, Plus, Search, Filter, Star, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTasks } from '@/hooks/use-tasks';
 import { Task } from '@shared/schema';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,7 @@ export function TodoList({
   const { tasks, blockTypes, toggleTaskCompletion } = useTasks();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBlockType, setSelectedBlockType] = useState<string>('all');
+  const [isBlockTypesCollapsed, setIsBlockTypesCollapsed] = useState(false);
 
   const filteredTasks = useMemo(() => {
     let filtered = tasks.filter(task => !task.completed);
@@ -224,13 +225,35 @@ export function TodoList({
       </div>
       
       {/* Block Type Manager */}
-      <div className="border-b border-gray-100 dark:border-gray-700 p-4">
-        <BlockTypeManager
-          blockTypes={blockTypes}
-          onCreateBlockType={onCreateBlockType}
-          onUpdateBlockType={onUpdateBlockType}
-          onDeleteBlockType={onDeleteBlockType}
-        />
+      <div className="border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center justify-between p-4 pb-2">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center">
+            Block Types
+          </h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsBlockTypesCollapsed(!isBlockTypesCollapsed)}
+            className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
+            data-testid="button-toggle-block-types"
+          >
+            {isBlockTypesCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+        {!isBlockTypesCollapsed && (
+          <div className="px-4 pb-4">
+            <BlockTypeManager
+              blockTypes={blockTypes}
+              onCreateBlockType={onCreateBlockType}
+              onUpdateBlockType={onUpdateBlockType}
+              onDeleteBlockType={onDeleteBlockType}
+            />
+          </div>
+        )}
       </div>
       
       {/* Task List */}
