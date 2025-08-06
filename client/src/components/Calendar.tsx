@@ -1,0 +1,237 @@
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Expand, Combine } from 'lucide-react';
+import { TIME_SLOTS, DAYS, formatTime12Hour, getWeekDates, hasDeadlineOnDate } from '@/lib/time-utils';
+import { useTimeBlocks } from '@/hooks/use-time-blocks';
+import { useTasks } from '@/hooks/use-tasks';
+import { cn } from '@/lib/utils';
+
+interface CalendarProps {
+  weekStart: Date;
+  isExpanded: boolean;
+  onToggleExpansion: () => void;
+  onTimeBlockClick: (blockId: string) => void;
+  onCreateTimeBlock: (data: { dayOfWeek: number; startTime: string; endTime: string }) => void;
+}
+
+export function Calendar({ 
+  weekStart, 
+  isExpanded, 
+  onToggleExpansion, 
+  onTimeBlockClick,
+  onCreateTimeBlock 
+}: CalendarProps) {
+  const { timeBlocks, blockTypes } = useTimeBlocks();
+  const { tasks } = useTasks();
+  
+  const [dragState, setDragState] = useState<{
+    isSelecting: boolean;
+    startSlot: { day: number; time: string } | null;
+    currentSlot: { day: number; time: string } | null;
+  }>({
+    isSelecting: false,
+    startSlot: null,
+    currentSlot: null,
+  });
+
+  const weekDates = getWeekDates(weekStart);
+
+  const handleMouseDown = (dayIndex: number, time: string) => {
+    setDragState({
+      isSelecting: true,
+      startSlot: { day: dayIndex, time },
+      currentSlot: { day: dayIndex, time },
+    });
+  };
+
+  const handleMouseEnter = (dayIndex: number, time: string) => {
+    if (dragState.isSelecting) {
+      setDragState(prev => ({
+        ...prev,
+        currentSlot: { day: dayIndex, time },
+      }));
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (dragState.startSlot && dragState.currentSlot) {
+      const startIndex = TIME_SLOTS.indexOf(dragState.startSlot.time);
+      const endIndex = TIME_SLOTS.indexOf(dragState.currentSlot.time);
+      
+      if (startIndex !== -1 && endIndex !== -1 && startIndex <= endIndex) {
+        const endTime = endIndex < TIME_SLOTS.length - 1 
+          ? TIME_SLOTS[endIndex + 1] 
+          : '23:30';
+          
+        onCreateTimeBlock({
+          dayOfWeek: dragState.startSlot.day,
+          startTime: dragState.startSlot.time,
+          endTime,
+        });
+      }
+    }
+    
+    setDragState({
+      isSelecting: false,
+      startSlot: null,
+      currentSlot: null,
+    });
+  };
+
+  const isSlotInSelection = (dayIndex: number, time: string) => {
+    if (!dragState.isSelecting || !dragState.startSlot || !dragState.currentSlot) return false;
+    
+    if (dayIndex !== dragState.startSlot.day) return false;
+    
+    const currentIndex = TIME_SLOTS.indexOf(time);
+    const startIndex = TIME_SLOTS.indexOf(dragState.startSlot.time);
+    const endIndex = TIME_SLOTS.indexOf(dragState.currentSlot.time);
+    
+    const minIndex = Math.min(startIndex, endIndex);
+    const maxIndex = Math.max(startIndex, endIndex);
+    
+    return currentIndex >= minIndex && currentIndex <= maxIndex;
+  };
+
+  const getTimeBlockForSlot = (dayIndex: number, time: string) => {
+    return timeBlocks.find(block => {
+      if (block.dayOfWeek !== dayIndex) return false;
+      
+      const startIndex = TIME_SLOTS.indexOf(block.startTime);
+      const endIndex = TIME_SLOTS.indexOf(block.endTime);
+      const currentIndex = TIME_SLOTS.indexOf(time);
+      
+      return currentIndex >= startIndex && currentIndex < endIndex;
+    });
+  };
+
+  const getBlockTypeById = (id: string) => {
+    return blockTypes.find(bt => bt.id === id);
+  };
+
+  const getTasksForBlockType = (blockTypeId: string) => {
+    return tasks.filter(task => task.blockTypeId === blockTypeId && !task.completed);
+  };
+
+  return (
+    <div className={cn(
+      "view-transition bg-white dark:bg-gray-900 flex flex-col",
+      isExpanded ? "w-full" : "flex-1",
+      "border-r border-gray-200 dark:border-gray-700"
+    )}>
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
+        <h2 className="text-lg font-semibold" data-testid="text-calendar-title">Weekly Calendar</h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleExpansion}
+          className="touch-target"
+          title={isExpanded ? "Collapse Calendar" : "Expand Calendar"}
+          data-testid="button-expand-calendar"
+        >
+          {isExpanded ? <Combine className="w-4 h-4" /> : <Expand className="w-4 h-4" />}
+        </Button>
+      </div>
+      
+      {/* Days Header */}
+      <div className="grid grid-cols-8 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-3 text-xs font-medium text-gray-400 uppercase tracking-wide">
+          Time
+        </div>
+        {DAYS.map((day, index) => (
+          <div key={day} className="p-3 text-center text-sm font-semibold">
+            <div>{day}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {weekDates[index].getDate()}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Calendar Grid */}
+      <div className="flex-1 overflow-auto" data-testid="calendar-grid">
+        <div className="grid grid-cols-8 gap-px bg-gray-200 dark:bg-gray-600">
+          {TIME_SLOTS.map((time) => (
+            <React.Fragment key={time}>
+              {/* Time Label */}
+              <div className="bg-white dark:bg-gray-900 flex items-center justify-center text-xs text-gray-400 border-r border-gray-200 dark:border-gray-700 min-h-12">
+                {formatTime12Hour(time)}
+              </div>
+              
+              {/* Day Cells */}
+              {Array.from({ length: 7 }, (_, dayIndex) => {
+                const timeBlock = getTimeBlockForSlot(dayIndex, time);
+                const blockType = timeBlock ? getBlockTypeById(timeBlock.blockTypeId) : null;
+                const blockTasks = timeBlock ? getTasksForBlockType(timeBlock.blockTypeId) : [];
+                const hasDeadline = hasDeadlineOnDate(tasks, weekDates[dayIndex]);
+                const isSelected = isSlotInSelection(dayIndex, time);
+                const isBlockStart = timeBlock && timeBlock.startTime === time;
+                
+                return (
+                  <div
+                    key={`${dayIndex}-${time}`}
+                    className={cn(
+                      "bg-white dark:bg-gray-900 min-h-12 relative cursor-pointer border-b border-gray-100 dark:border-gray-800",
+                      isSelected && "bg-blue-100 dark:bg-blue-900",
+                      timeBlock && "cursor-pointer"
+                    )}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (!timeBlock) {
+                        handleMouseDown(dayIndex, time);
+                      }
+                    }}
+                    onMouseEnter={() => handleMouseEnter(dayIndex, time)}
+                    onMouseUp={handleMouseUp}
+                    onClick={() => {
+                      if (timeBlock) {
+                        onTimeBlockClick(timeBlock.id);
+                      }
+                    }}
+                    data-testid={`cell-${dayIndex}-${time}`}
+                  >
+                    {/* Time Block */}
+                    {timeBlock && isBlockStart && blockType && (
+                      <div
+                        className="absolute inset-x-1 top-1 rounded-lg p-2 border-l-4 transition-all duration-200 hover:transform hover:scale-105 hover:shadow-md z-10"
+                        style={{
+                          backgroundColor: `${blockType.color}20`,
+                          borderLeftColor: blockType.color,
+                          height: `${(TIME_SLOTS.indexOf(timeBlock.endTime) - TIME_SLOTS.indexOf(timeBlock.startTime)) * 48 - 4}px`,
+                        }}
+                        data-testid={`timeblock-${timeBlock.id}`}
+                      >
+                        <div className="text-xs font-medium" style={{ color: blockType.color }}>
+                          {blockType.name}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {blockTasks.length} task{blockTasks.length !== 1 ? 's' : ''}
+                        </div>
+                        {blockTasks.some(task => task.priority) && (
+                          <div className="flex items-center mt-1">
+                            <span className="text-orange-500 text-xs">★</span>
+                            <span className="text-xs ml-1 text-gray-500">Priority items</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Deadline Indicator */}
+                    {hasDeadline && !timeBlock && (
+                      <div
+                        className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"
+                        title="Task deadline today"
+                        data-testid="deadline-indicator"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
