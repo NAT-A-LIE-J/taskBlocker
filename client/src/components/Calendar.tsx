@@ -4,7 +4,9 @@ import { Expand, Combine } from 'lucide-react';
 import { TIME_SLOTS, DAYS, formatTime12Hour, getWeekDates, hasDeadlineAtTimeSlot, getTimeBlockPosition, timeToMinutes, getCurrentTimePosition, isCurrentTimeSlot } from '@/lib/time-utils';
 import { useTimeBlocks } from '@/hooks/use-time-blocks';
 import { useTasks } from '@/hooks/use-tasks';
+import { useEvents } from '@/hooks/use-events';
 import { cn } from '@/lib/utils';
+import { format, isSameDay, isWithinInterval } from 'date-fns';
 
 interface CalendarProps {
   weekStart: Date;
@@ -23,6 +25,7 @@ export function Calendar({
 }: CalendarProps) {
   const { timeBlocks, blockTypes } = useTimeBlocks();
   const { tasks } = useTasks();
+  const { events, getEventsByDateRange } = useEvents();
   const currentTimePosition = getCurrentTimePosition();
   
   const [dragState, setDragState] = useState<{
@@ -103,6 +106,24 @@ export function Calendar({
     });
   };
 
+  const getEventsForSlot = (dayIndex: number, time: string) => {
+    const currentDate = weekDates[dayIndex];
+    const timeSlotStart = new Date(currentDate);
+    const [hours, minutes] = time.split(':').map(Number);
+    timeSlotStart.setHours(hours, minutes, 0, 0);
+    
+    const timeSlotEnd = new Date(timeSlotStart);
+    timeSlotEnd.setMinutes(timeSlotEnd.getMinutes() + 30);
+
+    return events.filter(event => {
+      const eventStart = new Date(event.startTime);
+      const eventEnd = new Date(event.endTime);
+      
+      // Check if event overlaps with this time slot
+      return (eventStart < timeSlotEnd && eventEnd > timeSlotStart);
+    });
+  };
+
   const getBlockTypeById = (id: string) => {
     return blockTypes.find(bt => bt.id === id);
   };
@@ -162,6 +183,7 @@ export function Calendar({
                 const timeBlock = getTimeBlockForSlot(dayIndex, time);
                 const blockType = timeBlock ? getBlockTypeById(timeBlock.blockTypeId) : null;
                 const blockTasks = timeBlock ? getTasksForBlockType(timeBlock.blockTypeId) : [];
+                const eventsInSlot = getEventsForSlot(dayIndex, time);
                 const hasDeadline = hasDeadlineAtTimeSlot(tasks, weekDates[dayIndex], time);
                 const isSelected = isSlotInSelection(dayIndex, time);
                 const isCurrentTime = currentTimePosition.isCurrentWeek && 
@@ -222,6 +244,50 @@ export function Calendar({
                         )}
                       </div>
                     )}
+                    
+                    {/* Events - overlapping with time blocks */}
+                    {eventsInSlot.map((event, eventIndex) => {
+                      const eventStart = new Date(event.startTime);
+                      const eventEnd = new Date(event.endTime);
+                      const slotStart = new Date(weekDates[dayIndex]);
+                      const [hours, minutes] = time.split(':').map(Number);
+                      slotStart.setHours(hours, minutes, 0, 0);
+                      
+                      // Calculate if this is the first slot where the event appears
+                      const isEventStart = eventStart.getTime() >= slotStart.getTime() && 
+                                          eventStart.getTime() < slotStart.getTime() + 30 * 60 * 1000;
+                      
+                      // Calculate event height based on duration
+                      const eventDurationMinutes = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60);
+                      const eventHeight = Math.max(20, (eventDurationMinutes / 30) * 48); // 48px per slot
+                      
+                      return isEventStart && (
+                        <div
+                          key={`event-${event.id}-${dayIndex}-${time}`}
+                          className="absolute inset-x-1 rounded-md p-1 text-white text-xs z-20 shadow-sm border border-opacity-30"
+                          style={{
+                            backgroundColor: event.color,
+                            borderColor: event.color,
+                            height: `${eventHeight}px`,
+                            top: '2px',
+                            right: timeBlock ? '50%' : '2px', // If there's a time block, take only half the width
+                          }}
+                          title={`${event.title}${event.description ? ': ' + event.description : ''}`}
+                          data-testid={`event-${event.id}`}
+                        >
+                          <div className="font-medium truncate">
+                            {event.title}
+                          </div>
+                          {event.allDay ? (
+                            <div className="text-xs opacity-80">All day</div>
+                          ) : (
+                            <div className="text-xs opacity-80">
+                              {format(eventStart, 'h:mm a')}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                     
                     {/* Deadline Indicator */}
                     {hasDeadline && !timeBlock && (

@@ -8,6 +8,7 @@ import { Task } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { getDeadlineUrgency } from '@/lib/time-utils';
 import { BlockTypeManager } from './BlockTypeManager';
+import { EventManager } from './EventManager';
 import { TaskEditForm } from './TaskEditForm';
 
 interface TodoListProps {
@@ -31,6 +32,7 @@ export function TodoList({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBlockType, setSelectedBlockType] = useState<string>('all');
   const [isBlockTypesCollapsed, setIsBlockTypesCollapsed] = useState(false);
+  const [isEventsCollapsed, setIsEventsCollapsed] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [editingTasks, setEditingTasks] = useState<Set<string>>(new Set());
 
@@ -483,6 +485,16 @@ export function TodoList({
             />
           </div>
         )}
+      </div>
+      
+      {/* Event Manager */}
+      <div className="border-b border-gray-100 dark:border-gray-700">
+        <div className="px-4 pb-4">
+          <EventManager 
+            isCollapsed={isEventsCollapsed}
+            onToggleCollapse={() => setIsEventsCollapsed(!isEventsCollapsed)}
+          />
+        </div>
       </div>
       
       {/* Task List */}

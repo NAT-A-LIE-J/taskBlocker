@@ -91,12 +91,35 @@ export const insertTimerSessionSchema = timerSessionSchema.omit({
 export type TimerSession = z.infer<typeof timerSessionSchema>;
 export type InsertTimerSession = z.infer<typeof insertTimerSessionSchema>;
 
+// Events (One-time calendar occurrences)
+export const eventSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  startTime: z.date(),
+  endTime: z.date(),
+  color: z.string().default('#3b82f6'),
+  allDay: z.boolean().default(false),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const insertEventSchema = eventSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type Event = z.infer<typeof eventSchema>;
+export type InsertEvent = z.infer<typeof insertEventSchema>;
+
 // App Data Structure
 export const appDataSchema = z.object({
   blockTypes: z.array(blockTypeSchema),
   timeBlocks: z.array(timeBlockSchema),
   tasks: z.array(taskSchema),
   timerSessions: z.array(timerSessionSchema),
+  events: z.array(eventSchema).default([]),
   settings: z.object({
     darkMode: z.boolean().default(false),
     weekStartDay: z.number().default(0), // 0 = Sunday

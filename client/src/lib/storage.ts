@@ -1,4 +1,4 @@
-import { AppData, BlockType, TimeBlock, Task, TimerSession, InsertBlockType, InsertTimeBlock, InsertTask, InsertTimerSession } from '@shared/schema';
+import { AppData, BlockType, TimeBlock, Task, TimerSession, Event, InsertBlockType, InsertTimeBlock, InsertTask, InsertTimerSession, InsertEvent } from '@shared/schema';
 import { nanoid } from 'nanoid';
 
 const STORAGE_KEY = 'timeblock-pro-data';
@@ -30,6 +30,7 @@ const defaultAppData: AppData = {
   timeBlocks: [],
   tasks: [],
   timerSessions: [],
+  events: [],
   settings: {
     darkMode: false,
     weekStartDay: 0,
@@ -71,6 +72,15 @@ export class StorageService {
           ...ts,
           startTime: new Date(ts.startTime),
         }));
+        
+        parsed.events = parsed.events?.map((event: any) => ({
+          ...event,
+          startTime: new Date(event.startTime),
+          endTime: new Date(event.endTime),
+          createdAt: new Date(event.createdAt),
+          updatedAt: new Date(event.updatedAt),
+        })) || [];
+        
         return parsed;
       }
     } catch (error) {
@@ -232,6 +242,55 @@ export class StorageService {
     this.data.tasks = this.data.tasks.filter(task => !task.archived);
     this.saveData();
     return archivedCount;
+  }
+
+  // Events
+  getEvents(): Event[] {
+    return this.data.events;
+  }
+
+  createEvent(event: InsertEvent): Event {
+    const newEvent: Event = {
+      ...event,
+      id: nanoid(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.data.events.push(newEvent);
+    this.saveData();
+    return newEvent;
+  }
+
+  updateEvent(id: string, updates: Partial<InsertEvent>): Event | null {
+    const index = this.data.events.findIndex(e => e.id === id);
+    if (index === -1) return null;
+    
+    this.data.events[index] = { 
+      ...this.data.events[index], 
+      ...updates, 
+      updatedAt: new Date()
+    };
+    this.saveData();
+    return this.data.events[index];
+  }
+
+  deleteEvent(id: string): boolean {
+    const index = this.data.events.findIndex(e => e.id === id);
+    if (index === -1) return false;
+    
+    this.data.events.splice(index, 1);
+    this.saveData();
+    return true;
+  }
+
+  getEventsByDateRange(startDate: Date, endDate: Date): Event[] {
+    return this.data.events.filter(event => {
+      const eventStart = new Date(event.startTime);
+      const eventEnd = new Date(event.endTime);
+      return (eventStart >= startDate && eventStart <= endDate) ||
+             (eventEnd >= startDate && eventEnd <= endDate) ||
+             (eventStart <= startDate && eventEnd >= endDate);
+    });
   }
 
   // Timer Sessions
