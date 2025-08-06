@@ -1,0 +1,206 @@
+# Persistent Time-Blocking Todo List App
+
+## Core Concept
+Create a personal productivity app that integrates a persistent weekly calendar with a dynamic todo list. The app maintains a constant weekly structure of time blocks while allowing tasks to flow dynamically into those blocks based on type designation.
+
+## Technical Requirements
+- **Platform**: Progressive Web App (PWA) optimized for iPad use and GitHub Pages deployment
+- **Responsive Design**: Touch-friendly interface with proper iPad viewport handling
+- **Data Persistence**: Multi-layered approach:
+  - Primary: localStorage for immediate data storage
+  - Backup: Automatic JSON export to Downloads folder weekly
+  - Recovery: Import/restore functionality from JSON backups
+- **PWA Features**: 
+  - Service worker for offline functionality
+  - Web app manifest for "Add to Home Screen" capability
+  - Fullscreen mode when launched from home screen
+- **Framework**: Modern web technologies (HTML5, CSS3, JavaScript) - suggest React if comfortable
+- **Week Configuration**: Weeks start on Sunday, 7 AM - 11 PM time range, 30-minute slots
+
+## Core Components
+
+### 1. Dual-View Interface
+- **Split-screen layout**: Calendar (left) and Todo List (right) by default
+- **Expansion capability**: Both views can expand to full-screen with toggle buttons
+- **Mobile responsive**: Stack views vertically on smaller screens
+
+### 2. Persistent Weekly Calendar
+- **Grid Structure**: 7-day weekly view with 30-minute time slots (7 AM - 11 PM recommended)
+- **Week Navigation**: Previous/Next week buttons with current week highlighting
+- **Time Block Creation**:
+  - Click and drag to select time slots and create blocks
+  - Blocks can span multiple consecutive time slots
+  - No overlapping blocks allowed (validation required)
+  - Visual feedback during block creation/editing
+
+### 3. Block Type Management
+- **Inline Editing**: Double-click block type names to edit directly
+- **Creation**: When creating a new block, prompt for type name or select existing
+- **Color Coding**: Auto-assign colors to different block types for visual distinction
+- **Management Panel**: Optional settings area to view/edit all block types
+
+### 4. Dynamic Todo List
+- **Task Properties**:
+  - Title (required)
+  - Description (optional, expandable text area)
+  - Deadline (optional date picker with time)
+  - Priority star (boolean flag - starred tasks appear first)
+  - Block type designation (dropdown/selector)
+  - Creation timestamp
+  - Completion status
+
+- **Task Display Logic**:
+  - Undesignated tasks: Grey/muted appearance in main list
+  - Designated tasks: Color-coded to match their block type
+  - Sorting within blocks: Priority starred items first, then by creation date
+  - Completion: Strike-through with archive option
+  - Deadline visualization: Small exclamation point (!) on calendar dates with task deadlines
+
+### 5. Calendar Integration Features
+- **Task Display in Blocks**:
+  - Show associated tasks within each time block
+  - Scrollable list when tasks exceed visual space
+  - Collapse/expand toggle for each block
+  - Click task to mark complete directly from calendar
+
+- **Deadline Indicators**:
+  - Small exclamation point (!) appears on calendar dates where tasks have deadlines
+  - Color-code urgency: red for overdue, orange for today, yellow for this week
+
+- **Block Interaction**:
+  - Click block to open detailed task view modal
+  - Drag blocks to move them to different time slots
+  - Resize blocks by dragging edges
+  - **Timer Mode**: Launch focused timer interface for active time blocks
+
+### 6. Timer Mode (Pomodoro-Style Focus Interface)
+- **Auto-Detection**: Automatically detect current active time block based on real time
+- **Manual Launch**: Click "Start Timer" button on any time block to begin focus session
+- **Timer Interface**:
+  - Full-screen modal overlay with large countdown display
+  - Shows time remaining in current block (e.g., "Study Time: 47:32 remaining")
+  - Progress bar showing completion percentage of time block
+  - Pause/Resume/Stop controls
+- **Task Integration**:
+  - Side panel shows all tasks designated to current block type
+  - Check off tasks directly from timer interface
+  - Real-time task completion updates calendar view behind modal
+- **Focus Features**:
+  - Minimize distractions with clean, focused UI
+  - Optional ambient background colors matching block type
+  - Sound notifications for block completion (with volume control)
+  - Optional break reminders between consecutive blocks
+- **Timer Controls**:
+  - Manual time adjustment (add/subtract 5-minute increments)
+  - "Extend Block" option to continue beyond scheduled time
+  - "Switch Block" to manually change to different block type
+  - Quick access to add new tasks without leaving timer mode
+
+### Enhanced User Experience Features
+
+### Visual Design
+- **Clean, minimal interface** with clear visual hierarchy
+- **Touch-friendly**: Large click targets (minimum 44px) for iPad use
+- **Smooth animations** for block movements and task updates
+- **Dark/light mode toggle** for different lighting conditions
+- **Focus Mode**: Distraction-free timer interface with ambient backgrounds
+
+### Timer & Focus Features
+- **Smart Block Detection**: Automatically identify current time block
+- **Ambient Timer Display**: Large, easy-to-read countdown with progress visualization
+- **Audio Notifications**: Gentle completion sounds with volume controls
+- **Break Management**: Optional break timers between consecutive blocks
+- **Background Sync**: Timer continues running even if app is minimized
+
+### Data Management
+- **Auto-save**: Continuous saving to localStorage with change detection
+- **Backup System**: Automatic weekly JSON export to Downloads folder
+- **Recovery Options**: Import/restore functionality from JSON backups
+- **Data Validation**: Ensure data integrity on load with fallback defaults
+- **Undo functionality**: For accidental deletions or changes (limited history)
+
+### Advanced Features to Consider
+- **Drag & Drop**: Drag tasks from todo list directly onto calendar blocks
+- **Search/Filter**: Find specific tasks or filter by block type
+- **Statistics**: Simple analytics on task completion and time allocation
+- **Template Weeks**: Save and load different weekly schedules
+- **Scalable Performance**: Optimize for unlimited tasks per block type with virtual scrolling
+- **Batch Operations**: Select multiple tasks for bulk designation or completion
+
+## Implementation Suggestions
+
+### Data Structure
+```javascript
+// Suggested data models
+blockTypes = {
+  id: string,
+  name: string,
+  color: string
+}
+
+timeBlocks = {
+  id: string,
+  blockTypeId: string,
+  dayOfWeek: number, // 0-6 (Sunday = 0)
+  startTime: string, // "14:30"
+  endTime: string,   // "16:00"
+}
+
+tasks = {
+  id: string,
+  title: string,
+  description: string,
+  deadline: date,
+  priority: boolean,
+  blockTypeId: string or null,
+  completed: boolean,
+  createdAt: timestamp
+}
+
+timerSessions = {
+  id: string,
+  blockTypeId: string,
+  startTime: timestamp,
+  pausedTime: number, // milliseconds paused
+  completed: boolean,
+  endedEarly: boolean
+}
+```
+
+### Key Algorithms
+- **Collision Detection**: Prevent overlapping time blocks
+- **Task Filtering**: Efficiently show tasks per block type
+- **Week Calculation**: Handle week boundaries and navigation
+- **Touch Handling**: Proper touch event management for iPad
+- **Time Block Detection**: Algorithm to identify current active block based on day/time
+- **Timer Management**: Accurate countdown with pause/resume state persistence
+- **Background Timer**: Continue timer operation when app is inactive (using Web Workers or similar)
+
+## User Flow Examples
+1. **Setup**: User creates "Study Time" block type, places it Tuesday 7-9 PM AND Thursday 2-4 PM
+2. **Task Creation**: Adds "Read Chapter 5" task, designates to "Study Time"
+3. **Universal Update**: Task immediately appears in BOTH Tuesday 7-9 PM AND Thursday 2-4 PM Study Time blocks
+4. **Week Navigation**: User switches to next week - "Read Chapter 5" still appears in next week's Study Time blocks
+5. **Timer Launch**: Tuesday 7 PM, user starts timer for Study Time block, sees "Read Chapter 5" in task panel
+6. **Task Completion**: User completes task during Thursday session - task disappears from ALL Study Time blocks across all weeks
+7. **Deadline Feature**: User adds "Submit Assignment" with Friday deadline - exclamation appears on Friday
+8. **Persistence**: All Study Time blocks remain empty until new Study Time tasks are added
+
+## Success Criteria
+- Intuitive iPad touch interaction
+- Persistent data across browser sessions
+- Smooth performance with 50+ tasks and 20+ time blocks
+- Visual clarity even with dense information
+- Quick task-to-block assignment workflow
+
+## Deployment Notes
+- **PWA Setup**: Include manifest.json and service worker for home screen installation
+- **iPad Optimization**: 
+  - Proper viewport meta tags for full-screen experience
+  - Touch action CSS for smooth scrolling and gestures
+  - Prevent zoom on input focus
+  - Support both portrait and landscape orientations
+- **GitHub Pages**: Ensure no server-side dependencies
+- **Installation Instructions**: Provide clear steps for "Add to Home Screen" on iPad
+- **Data Safety**: Include prominent backup/restore options in UI
+- **Performance**: Optimize for smooth 60fps interactions on iPad hardware
