@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, Pause, Play, Square, Check, Trash2 } from 'lucide-react';
+import { X, Pause, Play, Square, Check, Trash2, Edit3, Eye, EyeOff, AlertCircle, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TimeBlock, Task, BlockType } from '@shared/schema';
+import { TaskEditForm } from './TaskEditForm';
+import { getDeadlineUrgency } from '@/lib/time-utils';
+import { useTasks } from '@/hooks/use-tasks';
 
 interface FocusTimerProps {
   isOpen: boolean;
@@ -19,6 +22,10 @@ export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, we
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [editingTasks, setEditingTasks] = useState<Set<string>>(new Set());
+  
+  const { updateTask, blockTypes } = useTasks();
 
   // Calculate initial time remaining
   useEffect(() => {
@@ -78,6 +85,53 @@ export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, we
   const stopTimer = () => {
     setIsRunning(false);
     onClose();
+  };
+
+  const toggleTaskExpansion = (taskId: string) => {
+    setExpandedTasks(prev => {
+      const newSet = new Set([...Array.from(prev)]);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleTaskEditing = (taskId: string) => {
+    setEditingTasks(prev => {
+      const newEditing = new Set([...Array.from(prev)]);
+      if (newEditing.has(taskId)) {
+        newEditing.delete(taskId);
+      } else {
+        newEditing.add(taskId);
+        // Also expand task when starting to edit
+        setExpandedTasks(prev => new Set([...Array.from(prev), taskId]));
+      }
+      return newEditing;
+    });
+  };
+
+  const handleTaskSave = async (taskId: string, updates: Partial<Task>) => {
+    try {
+      await updateTask(taskId, updates);
+      setEditingTasks(prev => {
+        const newEditing = new Set([...Array.from(prev)]);
+        newEditing.delete(taskId);
+        return newEditing;
+      });
+    } catch (error) {
+      console.error('Failed to update task:', error);
+    }
+  };
+
+  const handleTaskEditCancel = (taskId: string) => {
+    setEditingTasks(prev => {
+      const newEditing = new Set([...Array.from(prev)]);
+      newEditing.delete(taskId);
+      return newEditing;
+    });
   };
 
   if (!isOpen || !currentBlock) {
@@ -197,63 +251,217 @@ export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, we
             
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 max-h-80 overflow-y-auto">
               <div className="space-y-3">
-                {blockTasks.map(task => (
-                  <div
-                    key={task.id}
-                    className={cn(
-                      "flex items-center space-x-3 p-3 rounded-lg transition-all",
-                      task.completed 
-                        ? "bg-green-500/20 text-green-200" 
-                        : "bg-white/10 text-white hover:bg-white/20"
-                    )}
-                    data-testid={`task-${task.id}`}
-                  >
-                    <button
-                      onClick={() => onToggleTaskCompletion(task.id)}
+                {blockTasks.map(task => {
+                  const isExpanded = expandedTasks.has(task.id);
+                  const isEditing = editingTasks.has(task.id);
+                  const urgency = task.deadline ? getDeadlineUrgency(task.deadline) : null;
+                  const associatedBlockType = blockTypes.find(bt => bt.id === task.blockTypeId);
+                  
+                  return (
+                    <div
+                      key={task.id}
                       className={cn(
-                        "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110",
+                        "rounded-lg transition-all",
                         task.completed 
-                          ? "bg-green-500 border-green-500 hover:bg-green-600" 
-                          : "border-white/50 hover:border-white hover:bg-white/10"
+                          ? "bg-green-500/20 text-green-200" 
+                          : "bg-white/10 text-white hover:bg-white/20",
+                        isExpanded && "bg-white/15"
                       )}
-                      data-testid={`button-complete-task-${task.id}`}
+                      data-testid={`task-${task.id}`}
                     >
-                      {task.completed && (
-                        <Check className="w-3 h-3 text-white" />
-                      )}
-                    </button>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className={cn(
-                        "font-medium",
-                        task.completed && "line-through opacity-75"
-                      )}>
-                        {task.title}
+                      {/* Main Task Row */}
+                      <div className="p-3">
+                        <div className="flex items-start justify-between">
+                          <div 
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => toggleTaskExpansion(task.id)}
+                          >
+                            <div className="flex items-center space-x-2 mb-2">
+                              {task.priority && <Star className="w-4 h-4 text-orange-400 fill-current" />}
+                              <div className={cn(
+                                "font-medium flex-1",
+                                task.completed && "line-through opacity-75"
+                              )}>
+                                {task.title}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0 opacity-50 hover:opacity-100 text-white/70 hover:text-white"
+                                data-testid={`button-expand-${task.id}`}
+                              >
+                                {isExpanded ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              </Button>
+                            </div>
+                            
+                            {/* Collapsed Description Preview */}
+                            {!isExpanded && task.description && (
+                              <div className="text-sm opacity-75 mt-1 line-clamp-2">
+                                {task.description}
+                              </div>
+                            )}
+                            
+                            {/* Basic Info Row */}
+                            {!isExpanded && (
+                              <div className="flex items-center mt-2 space-x-3">
+                                {task.deadline && (
+                                  <div className="flex items-center space-x-1">
+                                    <AlertCircle className={cn(
+                                      "w-3 h-3",
+                                      urgency === 'overdue' && "text-red-400",
+                                      urgency === 'today' && "text-orange-400",
+                                      urgency === 'this-week' && "text-yellow-400",
+                                      urgency === 'future' && "text-white/50"
+                                    )} />
+                                    <span className="text-xs text-white/75">
+                                      Due: {new Date(task.deadline).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                      })}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex items-center space-x-2 ml-3 shrink-0">
+                            {isExpanded && !isEditing && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-blue-400 hover:text-blue-300"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleTaskEditing(task.id);
+                                }}
+                                data-testid={`button-edit-${task.id}`}
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </Button>
+                            )}
+                            
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleTaskCompletion(task.id);
+                              }}
+                              className={cn(
+                                "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110",
+                                task.completed 
+                                  ? "bg-green-500 border-green-500 hover:bg-green-600" 
+                                  : "border-white/50 hover:border-white hover:bg-white/10"
+                              )}
+                              data-testid={`button-complete-task-${task.id}`}
+                            >
+                              {task.completed && (
+                                <Check className="w-3 h-3 text-white" />
+                              )}
+                            </button>
+                            
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteTask(task.id);
+                              }}
+                              className="p-1 rounded-full hover:bg-red-500/20 text-white/50 hover:text-red-400 transition-all"
+                              data-testid={`button-delete-task-${task.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      {task.description && (
-                        <div className="text-sm opacity-75 mt-1">
-                          {task.description}
+
+                      {/* Expanded Details */}
+                      {isExpanded && (
+                        <div className="px-3 pb-3 border-t border-white/20 pt-3">
+                          {!isEditing ? (
+                            // View Mode
+                            <div className="space-y-3 text-sm">
+                              {task.description && (
+                                <div>
+                                  <h5 className="font-medium text-white/90 mb-1">Description</h5>
+                                  <p className="text-white/75 whitespace-pre-wrap">
+                                    {task.description}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <span className="font-medium text-white/90">Block Type:</span>
+                                  <div className="mt-1">
+                                    {associatedBlockType ? (
+                                      <span 
+                                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                                        style={{ 
+                                          backgroundColor: `${associatedBlockType.color}30`,
+                                          color: associatedBlockType.color 
+                                        }}
+                                      >
+                                        {associatedBlockType.name}
+                                      </span>
+                                    ) : (
+                                      <span className="text-white/50 text-xs">Universal</span>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <span className="font-medium text-white/90">Priority:</span>
+                                  <div className="mt-1">
+                                    {task.priority ? (
+                                      <span className="text-orange-400 text-xs font-medium">High Priority</span>
+                                    ) : (
+                                      <span className="text-white/50 text-xs">Normal</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {task.deadline && (
+                                <div>
+                                  <span className="font-medium text-white/90">Deadline:</span>
+                                  <div className="mt-1 flex items-center space-x-2">
+                                    <AlertCircle className={cn(
+                                      "w-4 h-4",
+                                      urgency === 'overdue' && "text-red-400",
+                                      urgency === 'today' && "text-orange-400",
+                                      urgency === 'this-week' && "text-yellow-400",
+                                      urgency === 'future' && "text-white/50"
+                                    )} />
+                                    <span className="text-sm text-white/75">
+                                      {new Date(task.deadline).toLocaleDateString('en-US', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            // Edit Mode
+                            <div className="bg-white/5 rounded-lg p-3">
+                              <TaskEditForm
+                                task={task}
+                                blockTypes={blockTypes}
+                                onSave={(updates) => handleTaskSave(task.id, updates)}
+                                onCancel={() => handleTaskEditCancel(task.id)}
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      {task.priority && (
-                        <div className="text-orange-400 text-sm font-medium">
-                          High Priority
-                        </div>
-                      )}
-                      
-                      <button
-                        onClick={() => onDeleteTask(task.id)}
-                        className="p-1 rounded-full hover:bg-red-500/20 text-white/50 hover:text-red-400 transition-all"
-                        data-testid={`button-delete-task-${task.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               {pendingTasks.length === 0 && (

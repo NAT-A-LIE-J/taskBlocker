@@ -1,4 +1,104 @@
-import { startOfWeek, addWeeks, format, addMinutes, differenceInMinutes, isSameDay, isAfter, isBefore, parseISO, addDays } from 'date-fns';
+export function getDeadlineUrgency(deadline: string): 'overdue' | 'today' | 'this-week' | 'future' {
+  const now = new Date();
+  const deadlineDate = new Date(deadline);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const deadlineDay = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
+  
+  // Check if overdue
+  if (deadlineDate < now) {
+    return 'overdue';
+  }
+  
+  // Check if today
+  if (deadlineDay.getTime() === today.getTime()) {
+    return 'today';
+  }
+  
+  // Check if this week (next 7 days)
+  const oneWeekFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
+  if (deadlineDate <= oneWeekFromNow) {
+    return 'this-week';
+  }
+  
+  return 'future';
+}
+
+export function formatWeekRange(weekStart: Date): string {
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  
+  const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' });
+  const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' });
+  const startDay = weekStart.getDate();
+  const endDay = weekEnd.getDate();
+  const year = weekStart.getFullYear();
+  
+  if (startMonth === endMonth) {
+    return `${startMonth} ${startDay}-${endDay}, ${year}`;
+  } else {
+    return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`;
+  }
+}
+
+export function getCurrentActiveBlock(timeBlocks: any[], blockTypes: any[]) {
+  const now = new Date();
+  const currentDay = now.getDay(); // 0 = Sunday
+  const currentTime = now.getHours() * 60 + now.getMinutes(); // minutes since midnight
+  
+  // Find active time block
+  const activeBlock = timeBlocks.find(block => {
+    const blockStartTime = parseInt(block.startTime.replace(':', '')) / 100 * 60 + parseInt(block.startTime.split(':')[1]);
+    const blockEndTime = parseInt(block.endTime.replace(':', '')) / 100 * 60 + parseInt(block.endTime.split(':')[1]);
+    
+    return block.dayOfWeek === currentDay && 
+           currentTime >= blockStartTime && 
+           currentTime <= blockEndTime;
+  });
+  
+  if (!activeBlock) {
+    return null;
+  }
+  
+  const blockType = blockTypes.find(bt => bt.id === activeBlock.blockTypeId);
+  
+  return {
+    ...activeBlock,
+    blockType
+  };
+}
+
+export function checkTimeBlockOverlap(existingBlocks: any[], newBlock: any, excludeId?: string): boolean {
+  // Convert time strings to minutes for easier comparison
+  const timeToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+  
+  const newStart = timeToMinutes(newBlock.startTime);
+  const newEnd = timeToMinutes(newBlock.endTime);
+  
+  // Check for overlaps with existing blocks on the same day
+  return existingBlocks.some(block => {
+    // Skip the block we're updating (if any)
+    if (excludeId && block.id === excludeId) {
+      return false;
+    }
+    
+    // Only check blocks on the same day
+    if (block.dayOfWeek !== newBlock.dayOfWeek) {
+      return false;
+    }
+    
+    const blockStart = timeToMinutes(block.startTime);
+    const blockEnd = timeToMinutes(block.endTime);
+    
+    // Check for any overlap
+    return (newStart < blockEnd && newEnd > blockStart);
+  });
+}
+
+// Calendar constants
+export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export const TIME_SLOTS = [
   '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
@@ -7,124 +107,58 @@ export const TIME_SLOTS = [
   '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00'
 ];
 
-export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-export const FULL_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-export function getCurrentWeekStart(weekOffset = 0): Date {
-  const now = new Date();
-  const weekStart = startOfWeek(now, { weekStartsOn: 0 }); // Sunday
-  return addWeeks(weekStart, weekOffset);
-}
-
-export function formatWeekRange(weekStart: Date): string {
-  const weekEnd = addDays(weekStart, 6);
-  const startFormat = format(weekStart, 'MMM d');
-  const endFormat = format(weekEnd, 'd, yyyy');
-  return `${startFormat}-${endFormat}`;
-}
-
-export function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-}
-
-export function minutesToTime(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-}
-
-export function formatTime12Hour(time: string): string {
-  const [hours, minutes] = time.split(':').map(Number);
+export function formatTime12Hour(time24: string): string {
+  const [hours, minutes] = time24.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
-  const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+  const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
-export function getCurrentActiveBlock(timeBlocks: any[], blockTypes: any[]): any | null {
-  const now = new Date();
-  const currentDay = now.getDay();
-  const currentTime = format(now, 'HH:mm');
-  const currentMinutes = timeToMinutes(currentTime);
-
-  const activeBlock = timeBlocks.find(block => {
-    if (block.dayOfWeek !== currentDay) return false;
-    
-    const startMinutes = timeToMinutes(block.startTime);
-    const endMinutes = timeToMinutes(block.endTime);
-    
-    return currentMinutes >= startMinutes && currentMinutes < endMinutes;
-  });
-
-  if (activeBlock) {
-    const blockType = blockTypes.find(bt => bt.id === activeBlock.blockTypeId);
-    return { ...activeBlock, blockType };
-  }
-
-  return null;
-}
-
-export function getTimeRemainingInBlock(block: any): number {
-  const now = new Date();
-  const currentTime = format(now, 'HH:mm');
-  const currentMinutes = timeToMinutes(currentTime);
-  const endMinutes = timeToMinutes(block.endTime);
-  
-  return Math.max(0, endMinutes - currentMinutes);
-}
-
-export function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  
-  if (hours > 0) {
-    return `${hours}:${mins.toString().padStart(2, '0')}`;
-  }
-  return `${mins}:00`;
-}
-
-export function checkTimeBlockOverlap(
-  blocks: any[],
-  newBlock: { dayOfWeek: number; startTime: string; endTime: string },
-  excludeId?: string
-): boolean {
-  const newStartMinutes = timeToMinutes(newBlock.startTime);
-  const newEndMinutes = timeToMinutes(newBlock.endTime);
-
-  return blocks.some(block => {
-    if (excludeId && block.id === excludeId) return false;
-    if (block.dayOfWeek !== newBlock.dayOfWeek) return false;
-    
-    const blockStartMinutes = timeToMinutes(block.startTime);
-    const blockEndMinutes = timeToMinutes(block.endTime);
-    
-    // Check for overlap
-    return (
-      (newStartMinutes >= blockStartMinutes && newStartMinutes < blockEndMinutes) ||
-      (newEndMinutes > blockStartMinutes && newEndMinutes <= blockEndMinutes) ||
-      (newStartMinutes <= blockStartMinutes && newEndMinutes >= blockEndMinutes)
-    );
-  });
-}
-
 export function getWeekDates(weekStart: Date): Date[] {
-  return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + i);
+    dates.push(date);
+  }
+  return dates;
 }
 
 export function hasDeadlineOnDate(tasks: any[], date: Date): boolean {
-  return tasks.some(task => task.deadline && isSameDay(new Date(task.deadline), date));
+  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  
+  return tasks.some(task => {
+    if (!task.deadline || task.completed) return false;
+    const deadline = new Date(task.deadline);
+    return deadline >= dayStart && deadline < dayEnd;
+  });
 }
 
-export function getDeadlineUrgency(deadline: Date): 'overdue' | 'today' | 'this-week' | 'future' {
+export function getTimeRemainingInBlock(activeBlock: any): number {
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const taskDate = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate());
+  const currentTime = now.getHours() * 60 + now.getMinutes();
   
-  if (isBefore(taskDate, today)) return 'overdue';
-  if (isSameDay(taskDate, today)) return 'today';
+  // Convert end time to minutes
+  const [endHours, endMinutes] = activeBlock.endTime.split(':').map(Number);
+  const endTimeInMinutes = endHours * 60 + endMinutes;
   
-  const weekEnd = addDays(startOfWeek(now, { weekStartsOn: 0 }), 6);
-  if (isBefore(taskDate, addDays(weekEnd, 1))) return 'this-week';
+  // Calculate remaining time in minutes
+  const remainingMinutes = Math.max(0, endTimeInMinutes - currentTime);
   
-  return 'future';
+  return remainingMinutes;
+}
+
+export function getCurrentWeekStart(): Date {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  
+  // Calculate how many days to subtract to get to Sunday
+  const daysToSubtract = dayOfWeek;
+  
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - daysToSubtract);
+  weekStart.setHours(0, 0, 0, 0); // Set to start of day
+  
+  return weekStart;
 }
