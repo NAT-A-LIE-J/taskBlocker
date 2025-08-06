@@ -290,11 +290,15 @@ export function Calendar({
                       );
                     })}
                     
-                    {/* Deadline Indicator */}
-                    {hasDeadline && !timeBlock && (
+                    {/* Deadline Indicator - Always show when there's a deadline */}
+                    {hasDeadline && (
                       <div
-                        className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"
-                        title="Task deadline today"
+                        className="absolute w-2 h-2 bg-red-500 rounded-full animate-pulse z-30"
+                        style={{
+                          top: '4px',
+                          left: '4px',
+                        }}
+                        title="Task deadline at this time"
                         data-testid="deadline-indicator"
                       />
                     )}
