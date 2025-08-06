@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Trash2 } from 'lucide-react';
 import { type TimeBlock, type BlockType } from '@shared/schema';
-import { TIME_SLOTS, formatTime12Hour } from '@/lib/time-utils';
+import { formatTime12Hour, validateTimeFormat, convertTo24Hour } from '@/lib/time-utils';
 
 interface TimeBlockEditDialogProps {
   isOpen: boolean;
@@ -39,28 +40,69 @@ export function TimeBlockEditDialog({
   onDelete 
 }: TimeBlockEditDialogProps) {
   const [blockTypeId, setBlockTypeId] = useState(timeBlock?.blockTypeId || '');
-  const [startTime, setStartTime] = useState(timeBlock?.startTime || '');
-  const [endTime, setEndTime] = useState(timeBlock?.endTime || '');
+  const [startTimeInput, setStartTimeInput] = useState('');
+  const [endTimeInput, setEndTimeInput] = useState('');
+  const [startTimeError, setStartTimeError] = useState('');
+  const [endTimeError, setEndTimeError] = useState('');
 
   // Reset form when timeBlock changes
   React.useEffect(() => {
     if (timeBlock) {
       setBlockTypeId(timeBlock.blockTypeId);
-      setStartTime(timeBlock.startTime);
-      setEndTime(timeBlock.endTime);
+      // Convert 24-hour format to 12-hour for display
+      setStartTimeInput(formatTime12Hour(timeBlock.startTime));
+      setEndTimeInput(formatTime12Hour(timeBlock.endTime));
+      setStartTimeError('');
+      setEndTimeError('');
     }
   }, [timeBlock]);
 
+  const validateAndSetStartTime = (value: string) => {
+    setStartTimeInput(value);
+    if (value && !validateTimeFormat(value)) {
+      setStartTimeError('Invalid time format. Use 9:12 AM or 09:12');
+    } else {
+      setStartTimeError('');
+    }
+  };
+
+  const validateAndSetEndTime = (value: string) => {
+    setEndTimeInput(value);
+    if (value && !validateTimeFormat(value)) {
+      setEndTimeError('Invalid time format. Use 9:12 AM or 09:12');
+    } else {
+      setEndTimeError('');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (timeBlock && blockTypeId && startTime && endTime) {
-      onUpdate(timeBlock.id, {
-        blockTypeId,
-        startTime,
-        endTime,
-      });
-      onClose();
+    
+    if (!timeBlock || !blockTypeId || !startTimeInput || !endTimeInput) return;
+    
+    // Validate times before converting
+    if (!validateTimeFormat(startTimeInput) || !validateTimeFormat(endTimeInput)) {
+      return;
     }
+
+    const startTime24 = convertTo24Hour(startTimeInput);
+    const endTime24 = convertTo24Hour(endTimeInput);
+    
+    // Check that end time is after start time
+    const startMinutes = parseInt(startTime24.split(':')[0]) * 60 + parseInt(startTime24.split(':')[1]);
+    const endMinutes = parseInt(endTime24.split(':')[0]) * 60 + parseInt(endTime24.split(':')[1]);
+    
+    if (endMinutes <= startMinutes) {
+      setEndTimeError('End time must be after start time');
+      return;
+    }
+
+    onUpdate(timeBlock.id, {
+      blockTypeId,
+      startTime: startTime24,
+      endTime: endTime24,
+    });
+    onClose();
   };
 
   const handleDelete = () => {
@@ -70,13 +112,7 @@ export function TimeBlockEditDialog({
     }
   };
 
-  const getAvailableEndTimes = () => {
-    const startIndex = TIME_SLOTS.indexOf(startTime);
-    if (startIndex === -1) return TIME_SLOTS;
-    
-    // Return times from start time onwards, plus the final slot at 23:30
-    return [...TIME_SLOTS.slice(startIndex + 1), '23:30'];
-  };
+
 
   const selectedBlockType = blockTypes.find(bt => bt.id === blockTypeId);
 
@@ -118,34 +154,32 @@ export function TimeBlockEditDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startTime">Start Time</Label>
-              <Select value={startTime} onValueChange={setStartTime}>
-                <SelectTrigger data-testid="select-start-time">
-                  <SelectValue placeholder="Start time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIME_SLOTS.map((time) => (
-                    <SelectItem key={time} value={time}>
-                      {formatTime12Hour(time)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                id="startTime"
+                value={startTimeInput}
+                onChange={(e) => validateAndSetStartTime(e.target.value)}
+                placeholder="9:12 AM or 09:12"
+                className={startTimeError ? 'border-red-500' : ''}
+                data-testid="input-start-time"
+              />
+              {startTimeError && (
+                <p className="text-sm text-red-500" data-testid="error-start-time">{startTimeError}</p>
+              )}
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="endTime">End Time</Label>
-              <Select value={endTime} onValueChange={setEndTime}>
-                <SelectTrigger data-testid="select-end-time">
-                  <SelectValue placeholder="End time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAvailableEndTimes().map((time) => (
-                    <SelectItem key={time} value={time}>
-                      {formatTime12Hour(time)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                id="endTime"
+                value={endTimeInput}
+                onChange={(e) => validateAndSetEndTime(e.target.value)}
+                placeholder="9:55 AM or 09:55"
+                className={endTimeError ? 'border-red-500' : ''}
+                data-testid="input-end-time"
+              />
+              {endTimeError && (
+                <p className="text-sm text-red-500" data-testid="error-end-time">{endTimeError}</p>
+              )}
             </div>
           </div>
           
@@ -160,8 +194,8 @@ export function TimeBlockEditDialog({
                 <span className="font-medium">{selectedBlockType.name}</span>
               </div>
               <div className="text-sm text-gray-600 mt-1">
-                {startTime && endTime && (
-                  `${formatTime12Hour(startTime)} - ${formatTime12Hour(endTime)}`
+                {startTimeInput && endTimeInput && !startTimeError && !endTimeError && (
+                  `${startTimeInput} - ${endTimeInput}`
                 )}
               </div>
             </div>
@@ -190,7 +224,7 @@ export function TimeBlockEditDialog({
               </Button>
               <Button 
                 type="submit"
-                disabled={!blockTypeId || !startTime || !endTime}
+                disabled={!blockTypeId || !startTimeInput || !endTimeInput || !!startTimeError || !!endTimeError}
                 data-testid="button-update-timeblock"
               >
                 Update

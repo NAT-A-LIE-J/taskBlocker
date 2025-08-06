@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Expand, Combine } from 'lucide-react';
-import { TIME_SLOTS, DAYS, formatTime12Hour, getWeekDates, hasDeadlineOnDate } from '@/lib/time-utils';
+import { TIME_SLOTS, DAYS, formatTime12Hour, getWeekDates, hasDeadlineOnDate, getTimeBlockPosition, timeToMinutes } from '@/lib/time-utils';
 import { useTimeBlocks } from '@/hooks/use-time-blocks';
 import { useTasks } from '@/hooks/use-tasks';
 import { cn } from '@/lib/utils';
@@ -97,11 +97,8 @@ export function Calendar({
     return timeBlocks.find(block => {
       if (block.dayOfWeek !== dayIndex) return false;
       
-      const startIndex = TIME_SLOTS.indexOf(block.startTime);
-      const endIndex = TIME_SLOTS.indexOf(block.endTime);
-      const currentIndex = TIME_SLOTS.indexOf(time);
-      
-      return currentIndex >= startIndex && currentIndex < endIndex;
+      const { isInBlock } = getTimeBlockPosition(block.startTime, block.endTime, time);
+      return isInBlock;
     });
   };
 
@@ -166,7 +163,11 @@ export function Calendar({
                 const blockTasks = timeBlock ? getTasksForBlockType(timeBlock.blockTypeId) : [];
                 const hasDeadline = hasDeadlineOnDate(tasks, weekDates[dayIndex]);
                 const isSelected = isSlotInSelection(dayIndex, time);
-                const isBlockStart = timeBlock && timeBlock.startTime === time;
+                
+                // Use new positioning system for custom time blocks
+                const { isBlockStart, blockHeight, offsetTop } = timeBlock ? 
+                  getTimeBlockPosition(timeBlock.startTime, timeBlock.endTime, time) :
+                  { isBlockStart: false, blockHeight: 0, offsetTop: 0 };
                 
                 return (
                   <div
@@ -194,11 +195,12 @@ export function Calendar({
                     {/* Time Block */}
                     {timeBlock && isBlockStart && blockType && (
                       <div
-                        className="absolute inset-x-1 top-1 rounded-lg p-2 border-l-4 transition-all duration-200 hover:transform hover:scale-105 hover:shadow-md z-10"
+                        className="absolute inset-x-1 rounded-lg p-2 border-l-4 transition-all duration-200 hover:transform hover:scale-105 hover:shadow-md z-10"
                         style={{
                           backgroundColor: `${blockType.color}20`,
                           borderLeftColor: blockType.color,
-                          height: `${(TIME_SLOTS.indexOf(timeBlock.endTime) - TIME_SLOTS.indexOf(timeBlock.startTime)) * 48 - 4}px`,
+                          height: `${blockHeight}px`,
+                          top: `${offsetTop + 4}px`, // 4px padding from cell top
                         }}
                         data-testid={`timeblock-${timeBlock.id}`}
                       >
@@ -206,12 +208,15 @@ export function Calendar({
                           {blockType.name}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
+                          {formatTime12Hour(timeBlock.startTime)} - {formatTime12Hour(timeBlock.endTime)}
+                        </div>
+                        <div className="text-xs text-gray-400">
                           {blockTasks.length} task{blockTasks.length !== 1 ? 's' : ''}
                         </div>
                         {blockTasks.some(task => task.priority) && (
                           <div className="flex items-center mt-1">
                             <span className="text-orange-500 text-xs">★</span>
-                            <span className="text-xs ml-1 text-gray-500">Priority items</span>
+                            <span className="text-xs ml-1 text-gray-400">Priority items</span>
                           </div>
                         )}
                       </div>
