@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, Pause, Play, Square } from 'lucide-react';
+import { X, Pause, Play, Square, Check, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TimeBlock, Task, BlockType } from '@shared/schema';
 
@@ -11,9 +11,11 @@ interface FocusTimerProps {
   blockType: BlockType | null;
   tasks: Task[];
   weekStart: Date;
+  onToggleTaskCompletion: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
 }
 
-export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, weekStart }: FocusTimerProps) {
+export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, weekStart, onToggleTaskCompletion, onDeleteTask }: FocusTimerProps) {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
@@ -206,18 +208,22 @@ export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, we
                     )}
                     data-testid={`task-${task.id}`}
                   >
-                    <div className={cn(
-                      "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                      task.completed 
-                        ? "bg-green-500 border-green-500" 
-                        : "border-white/50"
-                    )}>
-                      {task.completed && (
-                        <div className="w-2 h-2 bg-white rounded-full" />
+                    <button
+                      onClick={() => onToggleTaskCompletion(task.id)}
+                      className={cn(
+                        "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110",
+                        task.completed 
+                          ? "bg-green-500 border-green-500 hover:bg-green-600" 
+                          : "border-white/50 hover:border-white hover:bg-white/10"
                       )}
-                    </div>
+                      data-testid={`button-complete-task-${task.id}`}
+                    >
+                      {task.completed && (
+                        <Check className="w-3 h-3 text-white" />
+                      )}
+                    </button>
                     
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className={cn(
                         "font-medium",
                         task.completed && "line-through opacity-75"
@@ -231,11 +237,21 @@ export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, we
                       )}
                     </div>
                     
-                    {task.priority && (
-                      <div className="text-orange-400 text-sm font-medium">
-                        High Priority
-                      </div>
-                    )}
+                    <div className="flex items-center space-x-2">
+                      {task.priority && (
+                        <div className="text-orange-400 text-sm font-medium">
+                          High Priority
+                        </div>
+                      )}
+                      
+                      <button
+                        onClick={() => onDeleteTask(task.id)}
+                        className="p-1 rounded-full hover:bg-red-500/20 text-white/50 hover:text-red-400 transition-all"
+                        data-testid={`button-delete-task-${task.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

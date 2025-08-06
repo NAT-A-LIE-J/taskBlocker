@@ -9,6 +9,7 @@ import { FocusTimer } from '@/components/FocusTimer';
 import { getCurrentWeekStart } from '@/lib/time-utils';
 import { useTimeBlocks } from '@/hooks/use-time-blocks';
 import { useStorage } from '@/hooks/use-storage';
+import { useTasks } from '@/hooks/use-tasks';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { TimeBlock } from '@shared/schema';
@@ -16,6 +17,7 @@ import { TimeBlock } from '@shared/schema';
 export default function Home() {
   const { data, storage } = useStorage();
   const { createTimeBlock, updateTimeBlock, deleteTimeBlock, createBlockType, updateBlockType, deleteBlockType } = useTimeBlocks();
+  const { toggleTaskCompletion, deleteTask } = useTasks();
   const { toast } = useToast();
   
   const [weekStart, setWeekStart] = useState(getCurrentWeekStart());
@@ -276,6 +278,8 @@ export default function Home() {
         blockType={currentActiveBlock ? data.blockTypes.find(bt => bt.id === currentActiveBlock.blockTypeId) || null : null}
         tasks={data.tasks}
         weekStart={weekStart}
+        onToggleTaskCompletion={toggleTaskCompletion}
+        onDeleteTask={deleteTask}
       />
     </div>
   );
