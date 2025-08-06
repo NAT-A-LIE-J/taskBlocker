@@ -6,6 +6,7 @@ import { TimerModal } from '@/components/TimerModal';
 import { TaskModal } from '@/components/TaskModal';
 import { TimeBlockEditDialog } from '@/components/TimeBlockEditDialog';
 import { FocusTimer } from '@/components/FocusTimer';
+import { CompletedTasksDialog } from '@/components/CompletedTasksDialog';
 import { getCurrentWeekStart } from '@/lib/time-utils';
 import { useTimeBlocks } from '@/hooks/use-time-blocks';
 import { useStorage } from '@/hooks/use-storage';
@@ -17,7 +18,7 @@ import { TimeBlock } from '@shared/schema';
 export default function Home() {
   const { data, storage } = useStorage();
   const { createTimeBlock, updateTimeBlock, deleteTimeBlock, createBlockType, updateBlockType, deleteBlockType } = useTimeBlocks();
-  const { toggleTaskCompletion, deleteTask } = useTasks();
+  const { toggleTaskCompletion, deleteTask, getCompletedTasks, deleteAllCompleted } = useTasks();
   const { toast } = useToast();
   
   const [weekStart, setWeekStart] = useState(getCurrentWeekStart());
@@ -27,6 +28,7 @@ export default function Home() {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [timeBlockEditOpen, setTimeBlockEditOpen] = useState(false);
   const [focusTimerOpen, setFocusTimerOpen] = useState(false);
+  const [completedTasksOpen, setCompletedTasksOpen] = useState(false);
   const [selectedBlockTypeId, setSelectedBlockTypeId] = useState<string>();
   const [editingTimeBlock, setEditingTimeBlock] = useState<TimeBlock | null>(null);
   const [currentActiveBlock, setCurrentActiveBlock] = useState<TimeBlock | null>(null);
@@ -208,6 +210,7 @@ export default function Home() {
         onStartTimer={handleStartTimer}
         darkMode={darkMode}
         onToggleDarkMode={handleToggleDarkMode}
+        onOpenCompletedTasks={() => setCompletedTasksOpen(true)}
       />
       
       <main className="flex-1 flex overflow-hidden">
@@ -280,6 +283,14 @@ export default function Home() {
         weekStart={weekStart}
         onToggleTaskCompletion={toggleTaskCompletion}
         onDeleteTask={deleteTask}
+      />
+
+      <CompletedTasksDialog
+        isOpen={completedTasksOpen}
+        onClose={() => setCompletedTasksOpen(false)}
+        completedTasks={getCompletedTasks()}
+        onDeleteTask={deleteTask}
+        onDeleteAllCompleted={deleteAllCompleted}
       />
     </div>
   );

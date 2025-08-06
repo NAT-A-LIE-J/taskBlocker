@@ -64,6 +64,20 @@ export function useTasks() {
     return data.tasks.filter(task => !task.blockTypeId && !task.completed);
   }, [data.tasks]);
 
+  const getCompletedTasks = useCallback(() => {
+    return data.tasks.filter(task => task.completed);
+  }, [data.tasks]);
+
+  const deleteAllCompleted = useCallback(() => {
+    const completedTasks = data.tasks.filter(task => task.completed);
+    completedTasks.forEach(task => storage.deleteTask(task.id));
+    refreshData();
+    toast({
+      title: "All completed tasks deleted",
+      description: `Removed ${completedTasks.length} completed tasks.`,
+    });
+  }, [data.tasks, storage, refreshData, toast]);
+
   return {
     tasks: data.tasks,
     blockTypes: data.blockTypes,
@@ -74,5 +88,7 @@ export function useTasks() {
     getTasksByBlockType,
     getPriorityTasks,
     getUnassignedTasks,
+    getCompletedTasks,
+    deleteAllCompleted,
   };
 }

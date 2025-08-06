@@ -10,6 +10,7 @@ interface HeaderProps {
   onStartTimer: () => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
+  onOpenCompletedTasks: () => void;
 }
 
 export function Header({ 
@@ -17,7 +18,8 @@ export function Header({
   onWeekChange, 
   onStartTimer, 
   darkMode, 
-  onToggleDarkMode 
+  onToggleDarkMode,
+  onOpenCompletedTasks 
 }: HeaderProps) {
   const { data } = useStorage();
   
@@ -80,6 +82,7 @@ export function Header({
         <Button
           variant="ghost"
           size="icon"
+          onClick={onOpenCompletedTasks}
           className="touch-target"
           data-testid="button-settings"
         >
