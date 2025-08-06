@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Expand, Combine } from 'lucide-react';
-import { TIME_SLOTS, DAYS, formatTime12Hour, getWeekDates, hasDeadlineOnDate, getTimeBlockPosition, timeToMinutes } from '@/lib/time-utils';
+import { TIME_SLOTS, DAYS, formatTime12Hour, getWeekDates, hasDeadlineAtTimeSlot, getTimeBlockPosition, timeToMinutes } from '@/lib/time-utils';
 import { useTimeBlocks } from '@/hooks/use-time-blocks';
 import { useTasks } from '@/hooks/use-tasks';
 import { cn } from '@/lib/utils';
@@ -161,7 +161,7 @@ export function Calendar({
                 const timeBlock = getTimeBlockForSlot(dayIndex, time);
                 const blockType = timeBlock ? getBlockTypeById(timeBlock.blockTypeId) : null;
                 const blockTasks = timeBlock ? getTasksForBlockType(timeBlock.blockTypeId) : [];
-                const hasDeadline = hasDeadlineOnDate(tasks, weekDates[dayIndex]);
+                const hasDeadline = hasDeadlineAtTimeSlot(tasks, weekDates[dayIndex], time);
                 const isSelected = isSlotInSelection(dayIndex, time);
                 
                 // Use new positioning system for custom time blocks

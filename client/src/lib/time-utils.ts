@@ -129,6 +129,26 @@ export function hasDeadlineOnDate(tasks: any[], date: Date): boolean {
   });
 }
 
+export function hasDeadlineAtTimeSlot(tasks: any[], date: Date, timeSlot: string): boolean {
+  // Convert time slot to minutes (e.g., "15:00" -> 900 minutes)
+  const slotMinutes = timeToMinutes(timeSlot);
+  const nextSlotMinutes = slotMinutes + 30; // 30-minute slots
+  
+  return tasks.some(task => {
+    if (!task.deadline || task.completed) return false;
+    const deadline = new Date(task.deadline);
+    
+    // Check if deadline is on the same date
+    const taskDate = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate());
+    const cellDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    if (taskDate.getTime() !== cellDate.getTime()) return false;
+    
+    // Check if deadline time falls within this time slot
+    const deadlineMinutes = deadline.getHours() * 60 + deadline.getMinutes();
+    return deadlineMinutes >= slotMinutes && deadlineMinutes < nextSlotMinutes;
+  });
+}
+
 export function getTimeRemainingInBlock(activeBlock: any): number {
   const now = new Date();
   const currentTime = now.getHours() * 60 + now.getMinutes();
