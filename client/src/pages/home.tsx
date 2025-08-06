@@ -82,42 +82,38 @@ export default function Home() {
     const currentDay = now.getDay(); // 0 = Sunday
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     
-    // Debug logging
-    console.log('Current day:', currentDay, 'Current time:', currentTime);
-    console.log('Available time blocks:', data.timeBlocks);
-    
     const activeBlock = data.timeBlocks.find(block => {
       const isRightDay = block.dayOfWeek === currentDay;
       const isAfterStart = block.startTime <= currentTime;
       const isBeforeEnd = block.endTime > currentTime;
       
-      console.log(`Block ${block.id}: day=${block.dayOfWeek} (${isRightDay}), start=${block.startTime} (${isAfterStart}), end=${block.endTime} (${isBeforeEnd})`);
-      
       return isRightDay && isAfterStart && isBeforeEnd;
     });
-    
-    console.log('Active block found:', activeBlock);
     
     if (activeBlock) {
       setCurrentActiveBlock(activeBlock);
       setFocusTimerOpen(true);
     } else {
-      // For testing, let's always show the focus timer with a sample block
-      // Find any block for today or create a mock one for demonstration
-      const todayBlocks = data.timeBlocks.filter(block => block.dayOfWeek === currentDay);
-      const demoBlock = todayBlocks[0] || data.timeBlocks[0];
+      // Create a buffer time block - find the next scheduled block to determine end time
+      const todayBlocks = data.timeBlocks
+        .filter(block => block.dayOfWeek === currentDay)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
       
-      if (demoBlock) {
-        toast({
-          title: "No active time block",
-          description: "Showing focus timer with available block for demo purposes.",
-        });
-        setCurrentActiveBlock(demoBlock);
-        setFocusTimerOpen(true);
-      } else {
-        // Fallback to timer modal if no blocks exist at all
-        setTimerModalOpen(true);
-      }
+      const nextBlock = todayBlocks.find(block => block.startTime > currentTime);
+      const endTime = nextBlock ? nextBlock.startTime : "23:59";
+      
+      // Create a virtual buffer time block
+      const bufferBlock: TimeBlock = {
+        id: 'buffer-time',
+        blockTypeId: 'buffer-time',
+        dayOfWeek: currentDay,
+        startTime: currentTime,
+        endTime: endTime,
+        createdAt: new Date(),
+      };
+      
+      setCurrentActiveBlock(bufferBlock);
+      setFocusTimerOpen(true);
     }
   };
 

@@ -78,11 +78,29 @@ export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, we
     onClose();
   };
 
-  if (!isOpen || !currentBlock || !blockType) {
+  if (!isOpen || !currentBlock) {
     return null;
   }
 
-  const blockTasks = tasks.filter(task => task.blockTypeId === blockType.id);
+  // Handle buffer time (when no specific block type is assigned)
+  const isBufferTime = currentBlock.blockTypeId === 'buffer-time';
+  const displayBlockType = isBufferTime ? {
+    id: 'buffer-time',
+    name: 'Buffer Time',
+    color: '#6B7280', // gray-500
+    createdAt: new Date()
+  } : blockType;
+
+  if (!displayBlockType) {
+    return null;
+  }
+
+  // For buffer time, show universal tasks (tasks without blockTypeId)
+  // For regular blocks, show tasks assigned to that block type
+  const blockTasks = isBufferTime 
+    ? tasks.filter(task => !task.blockTypeId) // Universal tasks
+    : tasks.filter(task => task.blockTypeId === blockType?.id);
+  
   const completedTasks = blockTasks.filter(task => task.completed);
   const pendingTasks = blockTasks.filter(task => !task.completed);
 
@@ -105,16 +123,16 @@ export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, we
           <div 
             className="inline-flex items-center px-6 py-3 rounded-full text-lg font-semibold mb-4"
             style={{ 
-              backgroundColor: `${blockType.color}30`,
-              color: blockType.color,
-              border: `2px solid ${blockType.color}50`
+              backgroundColor: `${displayBlockType.color}30`,
+              color: displayBlockType.color,
+              border: `2px solid ${displayBlockType.color}50`
             }}
           >
             <div 
               className="w-4 h-4 rounded-full mr-3" 
-              style={{ backgroundColor: blockType.color }}
+              style={{ backgroundColor: displayBlockType.color }}
             />
-            {blockType.name}
+            {displayBlockType.name}
           </div>
           <div className="text-gray-300 text-lg">
             {currentBlock.startTime} - {currentBlock.endTime}
@@ -172,7 +190,7 @@ export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, we
         {blockTasks.length > 0 && (
           <div className="max-w-2xl w-full px-8">
             <h3 className="text-2xl font-semibold mb-6 text-center">
-              Associated Tasks ({completedTasks.length}/{blockTasks.length} completed)
+              {isBufferTime ? 'Universal Tasks' : 'Associated Tasks'} ({completedTasks.length}/{blockTasks.length} completed)
             </h3>
             
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 max-h-80 overflow-y-auto">
@@ -237,10 +255,15 @@ export function FocusTimer({ isOpen, onClose, currentBlock, blockType, tasks, we
         {blockTasks.length === 0 && (
           <div className="max-w-2xl w-full px-8 text-center">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8">
-              <div className="text-4xl mb-4">🎯</div>
-              <h3 className="text-xl font-medium mb-2">Focus Time</h3>
+              <div className="text-4xl mb-4">{isBufferTime ? '⏰' : '🎯'}</div>
+              <h3 className="text-xl font-medium mb-2">
+                {isBufferTime ? 'Buffer Time' : 'Focus Time'}
+              </h3>
               <p className="text-gray-300">
-                No specific tasks assigned to this block. Use this time for deep work and focused attention.
+                {isBufferTime 
+                  ? 'No universal tasks assigned. Use this buffer time for breaks, planning, or catching up on tasks.'
+                  : 'No specific tasks assigned to this block. Use this time for deep work and focused attention.'
+                }
               </p>
             </div>
           </div>

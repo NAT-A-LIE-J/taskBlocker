@@ -47,6 +47,8 @@ Currently no authentication system implemented - designed as a personal producti
 - **Block Management**: Drag-and-drop interface for creating time blocks with overlap prevention
 - **Task Integration**: Tasks can be associated with specific block types and include priority levels, deadlines, and completion tracking
 - **Timer Functionality**: Built-in focus timer that integrates with active time blocks
+- **Buffer Time System**: When no time block is scheduled, the system automatically creates "Buffer Time" periods that count down until the next scheduled block
+- **Universal Tasks**: Tasks without specific block type assignments are treated as universal tasks and displayed during buffer time periods
 
 ## External Dependencies
 
