@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Expand, Combine } from 'lucide-react';
-import { TIME_SLOTS, DAYS, formatTime12Hour, getWeekDates, hasDeadlineAtTimeSlot, getTimeBlockPosition, timeToMinutes } from '@/lib/time-utils';
+import { TIME_SLOTS, DAYS, formatTime12Hour, getWeekDates, hasDeadlineAtTimeSlot, getTimeBlockPosition, timeToMinutes, getCurrentTimePosition, isCurrentTimeSlot } from '@/lib/time-utils';
 import { useTimeBlocks } from '@/hooks/use-time-blocks';
 import { useTasks } from '@/hooks/use-tasks';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ export function Calendar({
 }: CalendarProps) {
   const { timeBlocks, blockTypes } = useTimeBlocks();
   const { tasks } = useTasks();
+  const currentTimePosition = getCurrentTimePosition();
   
   const [dragState, setDragState] = useState<{
     isSelecting: boolean;
@@ -163,6 +164,9 @@ export function Calendar({
                 const blockTasks = timeBlock ? getTasksForBlockType(timeBlock.blockTypeId) : [];
                 const hasDeadline = hasDeadlineAtTimeSlot(tasks, weekDates[dayIndex], time);
                 const isSelected = isSlotInSelection(dayIndex, time);
+                const isCurrentTime = currentTimePosition.isCurrentWeek && 
+                  dayIndex === currentTimePosition.dayIndex && 
+                  isCurrentTimeSlot(time);
                 
                 // Use new positioning system for custom time blocks
                 const { isBlockStart, blockHeight, offsetTop } = timeBlock ? 
@@ -225,6 +229,18 @@ export function Calendar({
                         className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"
                         title="Task deadline today"
                         data-testid="deadline-indicator"
+                      />
+                    )}
+                    
+                    {/* Current Time Indicator */}
+                    {isCurrentTime && (
+                      <div
+                        className="absolute left-0 right-0 bg-yellow-400 opacity-80 pointer-events-none z-20"
+                        style={{
+                          height: '3px',
+                          top: `${Math.floor(currentTimePosition.timeProgress * 48)}px`, // 48px is cell height
+                        }}
+                        data-testid="current-time-indicator"
                       />
                     )}
                   </div>

@@ -177,6 +177,49 @@ export function getCurrentWeekStart(): Date {
   return weekStart;
 }
 
+export function getCurrentTimePosition(): { 
+  dayIndex: number; 
+  currentTime: string; 
+  timeProgress: number; 
+  isCurrentWeek: boolean;
+} {
+  const now = new Date();
+  const currentDayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  
+  // Convert current time to 24-hour format string
+  const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+  
+  // Calculate progress within the current 30-minute slot (0-1)
+  const minutesIntoSlot = currentMinute % 30;
+  const timeProgress = minutesIntoSlot / 30;
+  
+  // Check if we're viewing the current week
+  const weekStart = getCurrentWeekStart();
+  const currentWeekStart = new Date(now);
+  currentWeekStart.setDate(now.getDate() - now.getDay());
+  currentWeekStart.setHours(0, 0, 0, 0);
+  
+  const isCurrentWeek = weekStart.getTime() === currentWeekStart.getTime();
+  
+  return {
+    dayIndex: currentDayOfWeek,
+    currentTime: currentTimeStr,
+    timeProgress,
+    isCurrentWeek
+  };
+}
+
+export function isCurrentTimeSlot(timeSlot: string): boolean {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const slotMinutes = timeToMinutes(timeSlot);
+  
+  // Check if current time falls within this 30-minute slot
+  return currentMinutes >= slotMinutes && currentMinutes < slotMinutes + 30;
+}
+
 // Custom time input validation and conversion functions
 export function validateTimeFormat(timeStr: string): boolean {
   // Accept formats: 9:12 AM, 9:12 PM, 09:12, 21:12, 9:12am, 9:12pm (case insensitive)
