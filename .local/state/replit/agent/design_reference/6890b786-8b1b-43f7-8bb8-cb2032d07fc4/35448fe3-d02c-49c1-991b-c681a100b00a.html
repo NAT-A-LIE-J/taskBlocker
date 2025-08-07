@@ -1,0 +1,808 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TimeBlock Pro - Persistent Time-Blocking Todo List</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007AFF">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="TimeBlock Pro">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    ios: {
+                        blue: '#007AFF',
+                        'blue-dark': '#0066CC',
+                        green: '#34C759',
+                        orange: '#FF9500',
+                        red: '#FF3B30',
+                        purple: '#5856D6',
+                        gray: {
+                            50: '#F2F2F7',
+                            100: '#E5E5EA',
+                            200: '#C7C7CC',
+                            300: '#8E8E93',
+                            700: '#3A3A3C',
+                            900: '#1C1C1E'
+                        }
+                    }
+                },
+                fontFamily: {
+                    'system': ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'system-ui', 'sans-serif']
+                },
+                spacing: {
+                    '18': '4.5rem',
+                    '22': '5.5rem'
+                }
+            }
+        },
+        darkMode: 'class'
+    };
+    </script>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .time-slot {
+            min-height: 3rem;
+            border-bottom: 1px solid #E5E5EA;
+        }
+        
+        .time-block {
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .time-block:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .task-item {
+            transition: all 0.2s ease;
+        }
+        
+        .task-item:hover {
+            transform: translateX(2px);
+        }
+        
+        .view-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .drag-handle {
+            cursor: grab;
+        }
+        
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+        
+        .priority-star {
+            color: #FF9500;
+        }
+        
+        .deadline-indicator {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .focus-ring {
+            outline: 2px solid #007AFF;
+            outline-offset: 2px;
+        }
+        
+        .touch-target {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            gap: 1px;
+            background-color: #E5E5EA;
+        }
+        
+        .time-label {
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #8E8E93;
+            border-right: 1px solid #E5E5EA;
+        }
+        
+        .day-cell {
+            background: white;
+            position: relative;
+        }
+        
+        .dark .calendar-grid {
+            background-color: #3A3A3C;
+        }
+        
+        .dark .time-label,
+        .dark .day-cell {
+            background: #1C1C1E;
+            border-color: #3A3A3C;
+        }
+        
+        .modal-backdrop {
+            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .timer-circle {
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 1s linear;
+            transform: rotate(-90deg);
+            transform-origin: center;
+        }
+    </style>
+</head>
+<body class="font-system bg-ios-gray-50 dark:bg-ios-gray-900 text-ios-gray-900 dark:text-white transition-colors duration-200">
+    <!-- @COMPONENT: AppHeader [navigation, settings, dark mode toggle] -->
+    <header class="bg-white dark:bg-ios-gray-900 border-b border-ios-gray-100 dark:border-ios-gray-700 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-2xl font-bold text-ios-blue">TimeBlock Pro</h1>
+            <div class="flex items-center space-x-2 bg-ios-gray-50 dark:bg-ios-gray-700 rounded-lg p-1">
+                <button class="touch-target px-3 py-1 rounded-md bg-white dark:bg-ios-gray-600 text-sm font-medium shadow-sm">
+                    <i class="fas fa-chevron-left mr-1"></i>
+                    Previous
+                </button>
+                <span class="px-4 py-2 text-sm font-semibold" data-bind="currentWeek">Dec 15-21, 2024</span>
+                <button class="touch-target px-3 py-1 rounded-md bg-white dark:bg-ios-gray-600 text-sm font-medium shadow-sm">
+                    Next
+                    <i class="fas fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+            <!-- @FUNCTIONALITY: Timer quick access should show current active block -->
+            <button class="touch-target flex items-center space-x-2 bg-ios-green text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition-colors">
+                <i class="fas fa-play"></i>
+                <span data-bind="currentBlock">Start Focus</span>
+            </button>
+            
+            <button id="darkModeToggle" class="touch-target p-2 rounded-lg hover:bg-ios-gray-100 dark:hover:bg-ios-gray-700 transition-colors">
+                <i class="fas fa-moon dark:hidden"></i>
+                <i class="fas fa-sun hidden dark:inline"></i>
+            </button>
+            
+            <button class="touch-target p-2 rounded-lg hover:bg-ios-gray-100 dark:hover:bg-ios-gray-700 transition-colors">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: AppHeader -->
+
+    <!-- @COMPONENT: MainLayout [dual-view split-screen with expansion controls] -->
+    <main class="flex h-screen overflow-hidden bg-ios-gray-50 dark:bg-ios-gray-900">
+        <!-- Calendar View -->
+        <!-- @STATE: calendarExpanded:boolean = false -->
+        <div id="calendarView" class="view-transition flex-1 bg-white dark:bg-ios-gray-900 border-r border-ios-gray-200 dark:border-ios-gray-700 flex flex-col">
+            <!-- Calendar Header -->
+            <div class="flex items-center justify-between p-4 border-b border-ios-gray-100 dark:border-ios-gray-700">
+                <h2 class="text-lg font-semibold">Weekly Calendar</h2>
+                <div class="flex items-center space-x-2">
+                    <button id="expandCalendar" class="touch-target p-2 rounded-lg hover:bg-ios-gray-100 dark:hover:bg-ios-gray-700 transition-colors" title="Expand Calendar">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Days Header -->
+            <div class="grid grid-cols-8 bg-ios-gray-50 dark:bg-ios-gray-800 border-b border-ios-gray-200 dark:border-ios-gray-700">
+                <div class="p-3 text-xs font-medium text-ios-gray-300 uppercase tracking-wide">Time</div>
+                <div class="p-3 text-center text-sm font-semibold">Sun</div>
+                <div class="p-3 text-center text-sm font-semibold">Mon</div>
+                <div class="p-3 text-center text-sm font-semibold">Tue</div>
+                <div class="p-3 text-center text-sm font-semibold">Wed</div>
+                <div class="p-3 text-center text-sm font-semibold">Thu</div>
+                <div class="p-3 text-center text-sm font-semibold">Fri</div>
+                <div class="p-3 text-center text-sm font-semibold">Sat</div>
+            </div>
+            
+            <!-- Calendar Grid -->
+            <div class="flex-1 overflow-auto">
+                <div class="calendar-grid">
+                    <!-- @MAP: timeSlots.map(slot => ( -->
+                    <!-- Time Labels -->
+                    <div class="time-label">7:00 AM</div>
+                    <div class="day-cell time-slot relative">
+                        <!-- Example time block -->
+                        <div class="time-block absolute inset-x-1 top-1 h-12 bg-ios-blue bg-opacity-20 border-l-4 border-ios-blue p-2">
+                            <div class="text-xs font-medium text-ios-blue">Morning Routine</div>
+                            <div class="text-xs text-ios-gray-300">2 tasks</div>
+                        </div>
+                    </div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot">
+                        <!-- Deadline indicator -->
+                        <div class="absolute top-1 right-1 w-2 h-2 bg-ios-red rounded-full deadline-indicator" title="Task deadline today"></div>
+                    </div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    
+                    <div class="time-label">7:30 AM</div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    
+                    <div class="time-label">8:00 AM</div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot">
+                        <div class="time-block absolute inset-x-1 top-1 h-24 bg-ios-green bg-opacity-20 border-l-4 border-ios-green p-2">
+                            <div class="text-xs font-medium text-ios-green">Study Time</div>
+                            <div class="text-xs text-ios-gray-300">5 tasks</div>
+                            <div class="mt-1">
+                                <i class="fas fa-star text-xs text-ios-orange"></i>
+                                <span class="text-xs ml-1">Priority items</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot">
+                        <div class="time-block absolute inset-x-1 top-1 h-24 bg-ios-purple bg-opacity-20 border-l-4 border-ios-purple p-2">
+                            <div class="text-xs font-medium text-ios-purple">Work Focus</div>
+                            <div class="text-xs text-ios-gray-300">3 tasks</div>
+                        </div>
+                    </div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    
+                    <div class="time-label">8:30 AM</div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    <div class="day-cell time-slot"></div>
+                    
+                    <!-- Continue pattern for more time slots... -->
+                    <!-- @END_MAP )) -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Todo List View -->
+        <!-- @STATE: todoExpanded:boolean = false -->
+        <div id="todoView" class="view-transition w-96 bg-white dark:bg-ios-gray-900 flex flex-col">
+            <!-- Todo Header -->
+            <div class="flex items-center justify-between p-4 border-b border-ios-gray-100 dark:border-ios-gray-700">
+                <h2 class="text-lg font-semibold">Tasks</h2>
+                <div class="flex items-center space-x-2">
+                    <button class="touch-target p-2 rounded-lg hover:bg-ios-gray-100 dark:hover:bg-ios-gray-700 transition-colors" title="Add Task">
+                        <i class="fas fa-plus text-ios-blue"></i>
+                    </button>
+                    <button id="expandTodo" class="touch-target p-2 rounded-lg hover:bg-ios-gray-100 dark:hover:bg-ios-gray-700 transition-colors" title="Expand Todo List">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Filter/Search -->
+            <div class="p-4 border-b border-ios-gray-100 dark:border-ios-gray-700">
+                <div class="relative">
+                    <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 border border-ios-gray-200 dark:border-ios-gray-600 rounded-lg bg-ios-gray-50 dark:bg-ios-gray-800 focus:outline-none focus:ring-2 focus:ring-ios-blue">
+                    <i class="fas fa-search absolute left-3 top-3 text-ios-gray-300"></i>
+                </div>
+                
+                <div class="flex items-center space-x-2 mt-3">
+                    <select class="flex-1 px-3 py-2 border border-ios-gray-200 dark:border-ios-gray-600 rounded-lg bg-white dark:bg-ios-gray-800 text-sm">
+                        <option>All Block Types</option>
+                        <option>Study Time</option>
+                        <option>Work Focus</option>
+                        <option>Morning Routine</option>
+                        <option>Unassigned</option>
+                    </select>
+                    <button class="touch-target p-2 rounded-lg hover:bg-ios-gray-100 dark:hover:bg-ios-gray-700 transition-colors">
+                        <i class="fas fa-filter text-ios-gray-300"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Task List -->
+            <div class="flex-1 overflow-auto p-4 space-y-3">
+                <!-- Priority Tasks Section -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-ios-gray-300 uppercase tracking-wide mb-3 flex items-center">
+                        <i class="fas fa-star text-ios-orange mr-2"></i>
+                        Priority Tasks
+                    </h3>
+                    
+                    <!-- @MAP: priorityTasks.map(task => ( -->
+                    <div class="task-item bg-ios-gray-50 dark:bg-ios-gray-800 rounded-xl p-4 border-l-4 border-ios-blue" data-mock="true">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <h4 class="font-medium" data-bind="task.title">Complete React Tutorial</h4>
+                                <p class="text-sm text-ios-gray-300 mt-1" data-bind="task.description">Finish the advanced hooks section and build practice project</p>
+                                <div class="flex items-center mt-2 space-x-3">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-ios-blue bg-opacity-20 text-ios-blue">
+                                        Study Time
+                                    </span>
+                                    <span class="text-xs text-ios-gray-300" data-bind="task.deadline">Due: Dec 18, 2:00 PM</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2 ml-4">
+                                <i class="fas fa-star priority-star"></i>
+                                <button class="touch-target w-6 h-6 rounded-full border-2 border-ios-gray-200 hover:border-ios-blue transition-colors"></button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+                
+                <!-- Study Time Tasks -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-ios-green mb-3 flex items-center">
+                        <div class="w-3 h-3 bg-ios-green rounded-full mr-2"></div>
+                        Study Time (5 tasks)
+                    </h3>
+                    
+                    <div class="space-y-2">
+                        <div class="task-item bg-white dark:bg-ios-gray-800 rounded-lg p-3 border border-ios-gray-100 dark:border-ios-gray-700 hover:shadow-md transition-shadow" data-mock="true">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-sm">Read Chapter 12: Advanced Algorithms</h4>
+                                    <div class="flex items-center mt-1 space-x-2">
+                                        <span class="text-xs text-ios-gray-300">Created: Dec 15</span>
+                                    </div>
+                                </div>
+                                <button class="touch-target w-5 h-5 rounded-full border-2 border-ios-gray-200 hover:border-ios-green transition-colors ml-3"></button>
+                            </div>
+                        </div>
+                        
+                        <div class="task-item bg-white dark:bg-ios-gray-800 rounded-lg p-3 border border-ios-gray-100 dark:border-ios-gray-700" data-mock="true">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-sm">Practice coding problems</h4>
+                                    <p class="text-xs text-ios-gray-300 mt-1">Focus on dynamic programming exercises</p>
+                                </div>
+                                <button class="touch-target w-5 h-5 rounded-full border-2 border-ios-gray-200 hover:border-ios-green transition-colors ml-3"></button>
+                            </div>
+                        </div>
+                        
+                        <div class="task-item bg-white dark:bg-ios-gray-800 rounded-lg p-3 border border-ios-gray-100 dark:border-ios-gray-700" data-mock="true">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-sm">Review lecture notes</h4>
+                                </div>
+                                <button class="touch-target w-5 h-5 rounded-full border-2 border-ios-gray-200 hover:border-ios-green transition-colors ml-3"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Work Focus Tasks -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-ios-purple mb-3 flex items-center">
+                        <div class="w-3 h-3 bg-ios-purple rounded-full mr-2"></div>
+                        Work Focus (3 tasks)
+                    </h3>
+                    
+                    <div class="space-y-2">
+                        <div class="task-item bg-white dark:bg-ios-gray-800 rounded-lg p-3 border border-ios-gray-100 dark:border-ios-gray-700" data-mock="true">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-sm">Prepare project presentation</h4>
+                                    <div class="flex items-center mt-1 space-x-2">
+                                        <span class="text-xs text-ios-red">Due: Dec 19, 9:00 AM</span>
+                                        <i class="fas fa-exclamation-circle text-ios-red text-xs"></i>
+                                    </div>
+                                </div>
+                                <button class="touch-target w-5 h-5 rounded-full border-2 border-ios-gray-200 hover:border-ios-purple transition-colors ml-3"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Unassigned Tasks -->
+                <div>
+                    <h3 class="text-sm font-semibold text-ios-gray-300 mb-3 flex items-center">
+                        <div class="w-3 h-3 bg-ios-gray-300 rounded-full mr-2"></div>
+                        Unassigned (2 tasks)
+                    </h3>
+                    
+                    <div class="space-y-2">
+                        <div class="task-item bg-white dark:bg-ios-gray-800 rounded-lg p-3 border border-ios-gray-100 dark:border-ios-gray-700 opacity-60" data-mock="true">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-sm">Buy groceries</h4>
+                                    <p class="text-xs text-ios-gray-300 mt-1">Weekly shopping list</p>
+                                </div>
+                                <button class="touch-target w-5 h-5 rounded-full border-2 border-ios-gray-200 hover:border-ios-blue transition-colors ml-3"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- @END_COMPONENT: MainLayout -->
+    
+    <!-- @COMPONENT: TimerModal [focus mode interface] -->
+    <!-- @STATE: timerActive:boolean = false -->
+    <div id="timerModal" class="fixed inset-0 z-50 hidden modal-backdrop">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white dark:bg-ios-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-screen overflow-auto">
+                <!-- Timer Header -->
+                <div class="flex items-center justify-between p-6 border-b border-ios-gray-100 dark:border-ios-gray-700">
+                    <div>
+                        <h2 class="text-2xl font-bold text-ios-blue" data-bind="activeBlock.name">Study Time</h2>
+                        <p class="text-ios-gray-300">Focus session in progress</p>
+                    </div>
+                    <button class="touch-target p-2 rounded-lg hover:bg-ios-gray-100 dark:hover:bg-ios-gray-700 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="flex p-6 space-x-8">
+                    <!-- Timer Display -->
+                    <div class="flex-1 flex flex-col items-center justify-center">
+                        <div class="relative w-64 h-64 mb-8">
+                            <!-- @FUNCTIONALITY: Timer circle should animate based on remaining time -->
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="45" stroke="#E5E5EA" stroke-width="6" fill="none"/>
+                                <circle cx="50" cy="50" r="45" stroke="#007AFF" stroke-width="6" fill="none" 
+                                        class="timer-circle" style="stroke-dashoffset: 141;"/>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <div class="text-4xl font-bold" data-bind="timer.display">47:32</div>
+                                <div class="text-sm text-ios-gray-300">remaining</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Timer Controls -->
+                        <div class="flex items-center space-x-4">
+                            <button class="touch-target w-12 h-12 rounded-full bg-ios-gray-100 dark:bg-ios-gray-700 flex items-center justify-center hover:bg-ios-gray-200 transition-colors">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button class="touch-target w-16 h-16 rounded-full bg-ios-blue text-white flex items-center justify-center hover:bg-ios-blue-dark transition-colors">
+                                <i class="fas fa-pause text-xl"></i>
+                            </button>
+                            <button class="touch-target w-12 h-12 rounded-full bg-ios-gray-100 dark:bg-ios-gray-700 flex items-center justify-center hover:bg-ios-gray-200 transition-colors">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center space-x-4 mt-6">
+                            <button class="px-4 py-2 rounded-lg bg-ios-orange text-white font-medium hover:bg-orange-600 transition-colors">
+                                Extend Block
+                            </button>
+                            <button class="px-4 py-2 rounded-lg border border-ios-gray-200 dark:border-ios-gray-600 font-medium hover:bg-ios-gray-50 dark:hover:bg-ios-gray-800 transition-colors">
+                                Switch Block
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Task Panel -->
+                    <div class="w-96 bg-ios-gray-50 dark:bg-ios-gray-800 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold">Study Time Tasks</h3>
+                            <button class="touch-target p-1 rounded-lg hover:bg-ios-gray-200 dark:hover:bg-ios-gray-700 transition-colors">
+                                <i class="fas fa-plus text-ios-blue"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <!-- @MAP: activeBlockTasks.map(task => ( -->
+                            <div class="bg-white dark:bg-ios-gray-900 rounded-lg p-3 border border-ios-gray-100 dark:border-ios-gray-700" data-mock="true">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <h4 class="font-medium text-sm">Complete React Tutorial</h4>
+                                        <p class="text-xs text-ios-gray-300 mt-1">Finish advanced hooks section</p>
+                                        <div class="flex items-center mt-2">
+                                            <i class="fas fa-star text-ios-orange text-xs mr-1"></i>
+                                            <span class="text-xs text-ios-gray-300">Priority</span>
+                                        </div>
+                                    </div>
+                                    <button class="touch-target w-6 h-6 rounded-full border-2 border-ios-gray-200 hover:border-ios-green transition-colors ml-3"></button>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white dark:bg-ios-gray-900 rounded-lg p-3 border border-ios-gray-100 dark:border-ios-gray-700" data-mock="true">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <h4 class="font-medium text-sm">Read Chapter 12</h4>
+                                    </div>
+                                    <button class="touch-target w-6 h-6 rounded-full border-2 border-ios-gray-200 hover:border-ios-green transition-colors ml-3"></button>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white dark:bg-ios-gray-900 rounded-lg p-3 border border-ios-gray-100 dark:border-ios-gray-700" data-mock="true">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <h4 class="font-medium text-sm">Practice coding problems</h4>
+                                        <p class="text-xs text-ios-gray-300 mt-1">Dynamic programming focus</p>
+                                    </div>
+                                    <button class="touch-target w-6 h-6 rounded-full border-2 border-ios-gray-200 hover:border-ios-green transition-colors ml-3"></button>
+                                </div>
+                            </div>
+                            <!-- @END_MAP )) -->
+                        </div>
+                        
+                        <!-- Progress Summary -->
+                        <div class="mt-6 p-3 bg-ios-blue bg-opacity-10 rounded-lg">
+                            <div class="flex items-center justify-between text-sm">
+                                <span>Session Progress</span>
+                                <span class="font-semibold">0/3 completed</span>
+                            </div>
+                            <div class="w-full bg-ios-gray-200 dark:bg-ios-gray-600 rounded-full h-2 mt-2">
+                                <div class="bg-ios-blue h-2 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: TimerModal -->
+    
+    <!-- @COMPONENT: TaskModal [add/edit task interface] -->
+    <div id="taskModal" class="fixed inset-0 z-50 hidden modal-backdrop">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white dark:bg-ios-gray-900 rounded-2xl shadow-2xl w-full max-w-md">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold">Add New Task</h2>
+                        <button class="touch-target p-2 rounded-lg hover:bg-ios-gray-100 dark:hover:bg-ios-gray-700 transition-colors">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <form class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Task Title</label>
+                            <input type="text" class="w-full px-4 py-3 border border-ios-gray-200 dark:border-ios-gray-600 rounded-lg bg-white dark:bg-ios-gray-800 focus:outline-none focus:ring-2 focus:ring-ios-blue" placeholder="Enter task title...">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Description (Optional)</label>
+                            <textarea rows="3" class="w-full px-4 py-3 border border-ios-gray-200 dark:border-ios-gray-600 rounded-lg bg-white dark:bg-ios-gray-800 focus:outline-none focus:ring-2 focus:ring-ios-blue resize-none" placeholder="Add task details..."></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Block Type</label>
+                            <select class="w-full px-4 py-3 border border-ios-gray-200 dark:border-ios-gray-600 rounded-lg bg-white dark:bg-ios-gray-800 focus:outline-none focus:ring-2 focus:ring-ios-blue">
+                                <option value="">Unassigned</option>
+                                <option value="study">Study Time</option>
+                                <option value="work">Work Focus</option>
+                                <option value="routine">Morning Routine</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex space-x-4">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium mb-2">Deadline (Optional)</label>
+                                <input type="datetime-local" class="w-full px-4 py-3 border border-ios-gray-200 dark:border-ios-gray-600 rounded-lg bg-white dark:bg-ios-gray-800 focus:outline-none focus:ring-2 focus:ring-ios-blue">
+                            </div>
+                            <div class="flex items-end">
+                                <label class="flex items-center space-x-2 py-3">
+                                    <input type="checkbox" class="rounded text-ios-orange focus:ring-ios-orange">
+                                    <span class="text-sm font-medium">Priority</span>
+                                    <i class="fas fa-star text-ios-orange"></i>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-3 pt-4">
+                            <button type="button" class="flex-1 px-4 py-3 border border-ios-gray-200 dark:border-ios-gray-600 rounded-lg font-medium hover:bg-ios-gray-50 dark:hover:bg-ios-gray-800 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" class="flex-1 px-4 py-3 bg-ios-blue text-white rounded-lg font-medium hover:bg-ios-blue-dark transition-colors">
+                                Add Task
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: TaskModal -->
+
+    <script>
+    // TODO: Implement full React application with state management
+    // TODO: Add service worker for PWA functionality
+    // TODO: Implement localStorage persistence with backup system
+    // TODO: Add drag and drop functionality for time blocks and tasks
+    // TODO: Implement timer logic with Web Workers for background operation
+    // TODO: Add responsive mobile layout with stacked views
+    
+    (function() {
+        // Dark mode toggle functionality
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const html = document.documentElement;
+        
+        // Check for saved dark mode preference
+        const isDarkMode = localStorage.getItem('darkMode') === 'true';
+        if (isDarkMode) {
+            html.classList.add('dark');
+        }
+        
+        darkModeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.setItem('darkMode', html.classList.contains('dark'));
+        });
+        
+        // View expansion functionality
+        const calendarView = document.getElementById('calendarView');
+        const todoView = document.getElementById('todoView');
+        const expandCalendar = document.getElementById('expandCalendar');
+        const expandTodo = document.getElementById('expandTodo');
+        
+        let calendarExpanded = false;
+        let todoExpanded = false;
+        
+        expandCalendar.addEventListener('click', () => {
+            calendarExpanded = !calendarExpanded;
+            
+            if (calendarExpanded) {
+                calendarView.classList.remove('flex-1');
+                calendarView.classList.add('w-full');
+                todoView.classList.add('hidden');
+                expandCalendar.innerHTML = '<i class="fas fa-compress"></i>';
+            } else {
+                calendarView.classList.remove('w-full');
+                calendarView.classList.add('flex-1');
+                todoView.classList.remove('hidden');
+                expandCalendar.innerHTML = '<i class="fas fa-expand"></i>';
+            }
+        });
+        
+        expandTodo.addEventListener('click', () => {
+            todoExpanded = !todoExpanded;
+            
+            if (todoExpanded) {
+                todoView.classList.remove('w-96');
+                todoView.classList.add('w-full');
+                calendarView.classList.add('hidden');
+                expandTodo.innerHTML = '<i class="fas fa-compress"></i>';
+            } else {
+                todoView.classList.remove('w-full');
+                todoView.classList.add('w-96');
+                calendarView.classList.remove('hidden');
+                expandTodo.innerHTML = '<i class="fas fa-expand"></i>';
+            }
+        });
+        
+        // Time block interaction
+        document.querySelectorAll('.time-block').forEach(block => {
+            block.addEventListener('click', () => {
+                // TODO: Open block detail modal or start timer
+                document.getElementById('timerModal').classList.remove('hidden');
+            });
+        });
+        
+        // Timer modal close
+        document.querySelectorAll('#timerModal button').forEach(button => {
+            if (button.querySelector('.fa-times')) {
+                button.addEventListener('click', () => {
+                    document.getElementById('timerModal').classList.add('hidden');
+                });
+            }
+        });
+        
+        // Task checkbox interactions
+        document.querySelectorAll('.task-item button[class*="rounded-full"]').forEach(checkbox => {
+            checkbox.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // TODO: Mark task as complete
+                checkbox.innerHTML = '<i class="fas fa-check text-white text-xs"></i>';
+                checkbox.classList.add('bg-ios-green', 'border-ios-green');
+                
+                // Add strikethrough to parent task
+                const taskItem = checkbox.closest('.task-item');
+                taskItem.style.textDecoration = 'line-through';
+                taskItem.style.opacity = '0.5';
+            });
+        });
+        
+        // Add task button functionality
+        document.querySelectorAll('button[title="Add Task"]').forEach(button => {
+            button.addEventListener('click', () => {
+                document.getElementById('taskModal').classList.remove('hidden');
+            });
+        });
+        
+        // Task modal close
+        document.querySelectorAll('#taskModal button').forEach(button => {
+            if (button.querySelector('.fa-times') || button.textContent.includes('Cancel')) {
+                button.addEventListener('click', () => {
+                    document.getElementById('taskModal').classList.add('hidden');
+                });
+            }
+        });
+        
+        // Simulate timer countdown
+        function updateTimer() {
+            const timerDisplay = document.querySelector('[data-bind="timer.display"]');
+            if (timerDisplay) {
+                let minutes = parseInt(timerDisplay.textContent.split(':')[0]);
+                let seconds = parseInt(timerDisplay.textContent.split(':')[1]);
+                
+                if (seconds > 0) {
+                    seconds--;
+                } else if (minutes > 0) {
+                    minutes--;
+                    seconds = 59;
+                }
+                
+                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Update progress circle
+                const totalTime = 50 * 60; // 50 minutes in seconds
+                const currentTime = minutes * 60 + seconds;
+                const progress = ((totalTime - currentTime) / totalTime) * 283;
+                
+                const circle = document.querySelector('.timer-circle');
+                if (circle) {
+                    circle.style.strokeDashoffset = 283 - progress;
+                }
+            }
+        }
+        
+        // Update timer every second when modal is open
+        setInterval(() => {
+            if (!document.getElementById('timerModal').classList.contains('hidden')) {
+                updateTimer();
+            }
+        }, 1000);
+        
+        // Touch gesture support for mobile
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // Horizontal swipe detection for week navigation
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+                if (deltaX > 0) {
+                    // Swipe right - previous week
+                    console.log('Previous week');
+                } else {
+                    // Swipe left - next week
+                    console.log('Next week');
+                }
+            }
+        });
+        
+    })();
+    </script>
+</body>
+</html>

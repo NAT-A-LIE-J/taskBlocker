@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TimeBlock Pro - Personal Productivity App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#3B82F6',
+                        'secondary': '#6B7280',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'error': '#EF4444',
+                    }
+                }
+            },
+            darkMode: 'class'
+        };
+    </script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body class="font-sans bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    
+    <!-- @COMPONENT: AppHeader [navigation, theme toggle, settings] -->
+    <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-xl font-semibold text-gray-900 dark:text-white">TimeBlock Pro</h1>
+            <div class="flex items-center space-x-2">
+                <!-- Week Navigation -->
+                <button class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" data-event="click:previousWeek">
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[120px] text-center">
+                    <span data-bind="currentWeek.display">Dec 15-21, 2024</span>
+                </span>
+                <button class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" data-event="click:nextWeek">
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <!-- Timer Status -->
+            <div class="hidden md:flex items-center space-x-2 px-3 py-1 bg-green-100 dark:bg-green-900 rounded-full">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-xs font-medium text-green-700 dark:text-green-300">Study Time: 23:45</span>
+            </div>
+            <!-- View Toggle -->
+            <button class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center md:hidden" data-event="click:toggleView">
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            <!-- Dark Mode Toggle -->
+            <button class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" data-event="click:toggleDarkMode">
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                </svg>
+                <svg class="w-5 h-5 text-gray-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+            </button>
+            <!-- Settings -->
+            <button class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" data-event="click:openSettings">
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: AppHeader -->
+
+    <!-- @COMPONENT: MainLayout [split-screen calendar and todo] -->
+    <div class="flex-1 grid md:grid-cols-5 gap-4 p-4 h-[calc(100vh-73px)] overflow-hidden">
+        
+        <!-- @COMPONENT: CalendarView [persistent weekly calendar] -->
+        <div class="md:col-span-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Weekly Calendar</h2>
+                    <button class="px-3 py-1.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors min-h-[44px]" data-event="click:createTimeBlock">
+                        + New Block
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Calendar Grid -->
+            <div class="overflow-auto h-[calc(100%-73px)]">
+                <div class="min-w-[600px]">
+                    <!-- Day Headers -->
+                    <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 grid grid-cols-8 gap-px">
+                        <div class="p-3 text-center font-medium text-gray-700 dark:text-gray-300 text-sm bg-gray-50 dark:bg-gray-700">Time</div>
+                        <!-- @MAP: weekDays.map(day => ( -->
+                        <div class="p-3 text-center font-medium text-gray-700 dark:text-gray-300 text-sm bg-gray-50 dark:bg-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Sun</div>
+                            <div class="text-sm font-semibold">15</div>
+                            <!-- Deadline indicator example -->
+                            <div class="mt-1">
+                                <span class="inline-block w-2 h-2 bg-warning rounded-full" title="Tasks due today"></span>
+                            </div>
+                        </div>
+                        <div class="p-3 text-center font-medium text-gray-700 dark:text-gray-300 text-sm bg-gray-50 dark:bg-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Mon</div>
+                            <div class="text-sm font-semibold">16</div>
+                        </div>
+                        <div class="p-3 text-center font-medium text-gray-700 dark:text-gray-300 text-sm bg-gray-50 dark:bg-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Tue</div>
+                            <div class="text-sm font-semibold">17</div>
+                        </div>
+                        <div class="p-3 text-center font-medium text-gray-700 dark:text-gray-300 text-sm bg-gray-50 dark:bg-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Wed</div>
+                            <div class="text-sm font-semibold">18</div>
+                        </div>
+                        <div class="p-3 text-center font-medium text-gray-700 dark:text-gray-300 text-sm bg-gray-50 dark:bg-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Thu</div>
+                            <div class="text-sm font-semibold">19</div>
+                        </div>
+                        <div class="p-3 text-center font-medium text-gray-700 dark:text-gray-300 text-sm bg-gray-50 dark:bg-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Fri</div>
+                            <div class="text-sm font-semibold">20</div>
+                            <!-- Deadline indicator -->
+                            <div class="mt-1">
+                                <span class="inline-block w-2 h-2 bg-error rounded-full" title="Overdue tasks"></span>
+                            </div>
+                        </div>
+                        <div class="p-3 text-center font-medium text-gray-700 dark:text-gray-300 text-sm bg-gray-50 dark:bg-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Sat</div>
+                            <div class="text-sm font-semibold">21</div>
+                        </div>
+                        <!-- @END_MAP )) -->
+                    </div>
+                    
+                    <!-- Time Slots -->
+                    <!-- @MAP: timeSlots.map(time => ( -->
+                    <div class="grid grid-cols-8 gap-px border-b border-gray-100 dark:border-gray-600">
+                        <div class="p-2 text-center text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600">
+                            7:00 AM
+                        </div>
+                        <!-- Sunday -->
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer" data-event="click:selectTimeSlot" data-time="7:00" data-day="0"></div>
+                        <!-- Monday -->
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer" data-event="click:selectTimeSlot" data-time="7:00" data-day="1"></div>
+                        <!-- Tuesday - with time block example -->
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative p-1">
+                            <div class="bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-lg h-full p-2 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" data-event="click:openBlock" data-block-id="study-block-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs font-semibold text-blue-800 dark:text-blue-200" data-mock="true">Study Time</span>
+                                    <button class="p-0.5 rounded hover:bg-blue-200 dark:hover:bg-blue-700 min-w-[24px] min-h-[24px] flex items-center justify-center" data-event="click:startTimer">
+                                        <svg class="w-3 h-3 text-blue-600 dark:text-blue-300" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="space-y-1">
+                                    <div class="flex items-center space-x-1">
+                                        <div class="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                                        <span class="text-xs text-blue-700 dark:text-blue-300 truncate" data-mock="true">Read Chapter 5</span>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <div class="w-1 h-1 bg-blue-400 rounded-full"></div>
+                                        <span class="text-xs text-blue-700 dark:text-blue-300 truncate" data-mock="true">Review notes</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Wednesday -->
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer" data-event="click:selectTimeSlot" data-time="7:00" data-day="3"></div>
+                        <!-- Thursday - with different block type -->
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative p-1">
+                            <div class="bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700 rounded-lg h-full p-2 cursor-pointer hover:bg-green-200 dark:hover:bg-green-800 transition-colors" data-event="click:openBlock" data-block-id="workout-block-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs font-semibold text-green-800 dark:text-green-200" data-mock="true">Workout</span>
+                                    <button class="p-0.5 rounded hover:bg-green-200 dark:hover:bg-green-700 min-w-[24px] min-h-[24px] flex items-center justify-center" data-event="click:startTimer">
+                                        <svg class="w-3 h-3 text-green-600 dark:text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="space-y-1">
+                                    <div class="flex items-center space-x-1">
+                                        <div class="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                                        <span class="text-xs text-green-700 dark:text-green-300 truncate" data-mock="true">Upper body routine</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Friday -->
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer" data-event="click:selectTimeSlot" data-time="7:00" data-day="5"></div>
+                        <!-- Saturday -->
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 relative hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer" data-event="click:selectTimeSlot" data-time="7:00" data-day="6"></div>
+                    </div>
+                    
+                    <!-- Additional time slots would continue here - showing 7:30 AM as example -->
+                    <div class="grid grid-cols-8 gap-px border-b border-gray-100 dark:border-gray-600">
+                        <div class="p-2 text-center text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-r border-gray-200 dark:border-gray-600">
+                            7:30 AM
+                        </div>
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer"></div>
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer"></div>
+                        <!-- Tuesday continued - extending study block -->
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative p-1">
+                            <div class="bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-lg h-full"></div>
+                        </div>
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer"></div>
+                        <!-- Thursday continued - extending workout block -->
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative p-1">
+                            <div class="bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700 rounded-lg h-full"></div>
+                        </div>
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-600 relative hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer"></div>
+                        <div class="min-h-[60px] bg-white dark:bg-gray-800 relative hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors cursor-pointer"></div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                    
+                    <!-- Time slots would continue from 8:00 AM to 11:00 PM in 30-minute increments -->
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
+                        <!-- @STATE: showAllTimeSlots:boolean = false -->
+                        <button class="text-primary hover:text-blue-600 font-medium" data-event="click:expandTimeSlots">
+                            Show all time slots (8:00 AM - 11:00 PM)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: CalendarView -->
+        
+        <!-- @COMPONENT: TodoListView [dynamic task management] -->
+        <div class="md:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Tasks</h2>
+                    <button class="px-3 py-1.5 bg-primary text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors min-h-[44px]" data-event="click:createTask">
+                        + Add Task
+                    </button>
+                </div>
+                
+                <!-- Block Type Filter -->
+                <div class="flex flex-wrap gap-2">
+                    <button class="px-3 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-event="click:filterAll">
+                        All Tasks
+                    </button>
+                    <button class="px-3 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors" data-event="click:filterByBlockType" data-block-type="study">
+                        Study Time
+                    </button>
+                    <button class="px-3 py-1 text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full hover:bg-green-200 dark:hover:bg-green-800 transition-colors" data-event="click:filterByBlockType" data-block-type="workout">
+                        Workout
+                    </button>
+                    <button class="px-3 py-1 text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 rounded-full hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors" data-event="click:filterUndesignated">
+                        Undesignated
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Task List -->
+            <div class="flex-1 overflow-auto p-4 space-y-3">
+                
+                <!-- Priority Tasks Section -->
+                <div class="space-y-2">
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                        <svg class="w-4 h-4 text-yellow-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                        </svg>
+                        Priority Tasks
+                    </h3>
+                    
+                    <!-- Priority Task Item -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 border border-blue-200 dark:border-blue-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-650 transition-colors" data-event="click:selectTask" data-task-id="task-1">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <button class="w-4 h-4 rounded border-2 border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center -m-3 p-3" data-event="click:toggleComplete">
+                                        <!-- Checkbox when completed would show checkmark -->
+                                    </button>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white truncate" data-mock="true">Read Chapter 5 - Quantum Physics</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                        Study Time
+                                    </span>
+                                </div>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2" data-mock="true">Focus on wave-particle duality and quantum superposition concepts</p>
+                                <div class="flex items-center space-x-3 text-xs">
+                                    <span class="text-gray-500 dark:text-gray-400">
+                                        <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                        Due Friday
+                                    </span>
+                                    <span class="text-gray-500 dark:text-gray-400">
+                                        <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Created 2 hours ago
+                                    </span>
+                                </div>
+                            </div>
+                            <button class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 min-w-[44px] min-h-[44px] flex items-center justify-center -m-2" data-event="click:editTask">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Regular Tasks Section -->
+                <div class="space-y-2">
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Other Tasks</h3>
+                    
+                    <!-- Regular Task Item -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-650 transition-colors" data-event="click:selectTask" data-task-id="task-2">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <button class="w-4 h-4 rounded border-2 border-green-400 hover:bg-green-50 dark:hover:bg-green-900 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center -m-3 p-3" data-event="click:toggleComplete">
+                                    </button>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white truncate" data-mock="true">Upper body routine</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                        Workout
+                                    </span>
+                                </div>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2" data-mock="true">Focus on chest, shoulders, and triceps</p>
+                                <div class="flex items-center space-x-3 text-xs">
+                                    <span class="text-gray-500 dark:text-gray-400">
+                                        <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Created 1 day ago
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Undesignated Task Item -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 opacity-60 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-650 hover:opacity-80 transition-all" data-event="click:selectTask" data-task-id="task-3">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <button class="w-4 h-4 rounded border-2 border-gray-400 hover:bg-gray-50 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center -m-3 p-3" data-event="click:toggleComplete">
+                                    </button>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white truncate" data-mock="true">Buy groceries</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400">
+                                        Undesignated
+                                    </span>
+                                </div>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2" data-mock="true">Milk, bread, vegetables, and protein</p>
+                                <div class="flex items-center space-x-3 text-xs">
+                                    <span class="text-gray-500 dark:text-gray-400">
+                                        <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Created 3 hours ago
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Completed Task Item -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 opacity-50 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-650 transition-colors" data-event="click:selectTask" data-task-id="task-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <button class="w-4 h-4 rounded border-2 border-success bg-success hover:bg-green-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center -m-3 p-3" data-event="click:toggleComplete">
+                                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </button>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white truncate line-through" data-mock="true">Review notes from yesterday</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                        Study Time
+                                    </span>
+                                </div>
+                                <div class="flex items-center space-x-3 text-xs">
+                                    <span class="text-success">
+                                        <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Completed 1 hour ago
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: TodoListView -->
+        
+    </div>
+    <!-- @END_COMPONENT: MainLayout -->
+    
+    <!-- @COMPONENT: TimerModal [focus mode interface] -->
+    <div class="fixed inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 z-50 flex items-center justify-center hidden" id="timerModal" data-state="hidden">
+        <div class="text-center text-white max-w-2xl mx-auto p-8">
+            <!-- Timer Display -->
+            <div class="mb-8">
+                <h1 class="text-2xl font-medium mb-2" data-bind="currentBlock.name">Study Time</h1>
+                <div class="text-8xl font-light mb-4" data-bind="timer.display">23:45</div>
+                <div class="w-64 h-2 bg-blue-800 rounded-full mx-auto mb-4">
+                    <div class="h-full bg-white rounded-full transition-all duration-1000" style="width: 45%" data-bind="timer.progressPercent"></div>
+                </div>
+                <p class="text-blue-200 text-lg" data-bind="timer.status">45% complete</p>
+            </div>
+            
+            <!-- Timer Controls -->
+            <div class="flex items-center justify-center space-x-4 mb-8">
+                <button class="p-4 bg-blue-700 hover:bg-blue-600 rounded-full transition-colors min-w-[56px] min-h-[56px] flex items-center justify-center" data-event="click:pauseTimer">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 002 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+                <button class="p-4 bg-red-600 hover:bg-red-500 rounded-full transition-colors min-w-[56px] min-h-[56px] flex items-center justify-center" data-event="click:stopTimer">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+                <button class="p-4 bg-blue-700 hover:bg-blue-600 rounded-full transition-colors min-w-[56px] min-h-[56px] flex items-center justify-center" data-event="click:extendTimer">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Active Tasks Panel -->
+            <div class="bg-blue-800 bg-opacity-50 rounded-xl p-6 max-w-md mx-auto">
+                <h3 class="text-lg font-medium mb-4">Active Tasks</h3>
+                <div class="space-y-3">
+                    <!-- @MAP: activeTasks.map(task => ( -->
+                    <div class="flex items-center justify-between bg-blue-700 bg-opacity-50 rounded-lg p-3" data-mock="true">
+                        <div class="flex items-center space-x-3">
+                            <button class="w-5 h-5 rounded border-2 border-white hover:bg-white hover:bg-opacity-20 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center -m-4 p-4" data-event="click:completeTask">
+                            </button>
+                            <span class="text-sm font-medium">Read Chapter 5</span>
+                        </div>
+                        <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                    </div>
+                    <div class="flex items-center justify-between bg-blue-700 bg-opacity-50 rounded-lg p-3" data-mock="true">
+                        <div class="flex items-center space-x-3">
+                            <button class="w-5 h-5 rounded border-2 border-white hover:bg-white hover:bg-opacity-20 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center -m-4 p-4" data-event="click:completeTask">
+                            </button>
+                            <span class="text-sm font-medium">Review notes</span>
+                        </div>
+                        <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+                
+                <button class="mt-4 px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-sm font-medium transition-colors min-h-[44px]" data-event="click:addTaskDuringTimer">
+                    + Add Task
+                </button>
+            </div>
+            
+            <!-- Exit Button -->
+            <button class="absolute top-6 right-6 p-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" data-event="click:closeTimer">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: TimerModal -->
+    
+    <!-- @COMPONENT: TaskModal [create/edit task interface] -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4 hidden" id="taskModal">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Add New Task</h2>
+                    <button class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center" data-event="click:closeTaskModal">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <form class="p-6 space-y-4" data-event="submit:createTask">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Task Title *</label>
+                    <input type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white min-h-[44px]" placeholder="Enter task title..." required data-bind="newTask.title">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                    <textarea class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white resize-none" rows="3" placeholder="Optional description..." data-bind="newTask.description"></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Block Type</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white min-h-[44px]" data-bind="newTask.blockTypeId">
+                            <option value="">Undesignated</option>
+                            <option value="study">Study Time</option>
+                            <option value="workout">Workout</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Deadline</label>
+                        <input type="date" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-white min-h-[44px]" data-bind="newTask.deadline">
+                    </div>
+                </div>
+                
+                <div class="flex items-center">
+                    <input type="checkbox" id="priority" class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" data-bind="newTask.priority">
+                    <label for="priority" class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer flex items-center min-h-[44px] pl-2 -ml-2">
+                        <svg class="w-4 h-4 text-yellow-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                        </svg>
+                        Mark as Priority
+                    </label>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors min-h-[44px]" data-event="click:closeTaskModal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-blue-600 rounded-lg transition-colors min-h-[44px]">
+                        Create Task
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: TaskModal -->
+
+    <script>
+        // TODO: Implement business logic, API calls, and state management
+        
+        (function() {
+            'use strict';
+            
+            // Dark mode toggle functionality
+            function initializeDarkMode() {
+                const darkModeToggle = document.querySelector('[data-event="click:toggleDarkMode"]');
+                const html = document.documentElement;
+                
+                // Check for saved theme preference or default to 'light'
+                const currentTheme = localStorage.getItem('theme') || 'light';
+                html.classList.toggle('dark', currentTheme === 'dark');
+                
+                darkModeToggle?.addEventListener('click', () => {
+                    const isDark = html.classList.contains('dark');
+                    html.classList.toggle('dark', !isDark);
+                    localStorage.setItem('theme', !isDark ? 'dark' : 'light');
+                });
+            }
+            
+            // Modal management
+            function initializeModals() {
+                const timerModal = document.getElementById('timerModal');
+                const taskModal = document.getElementById('taskModal');
+                
+                // Timer modal controls
+                document.querySelectorAll('[data-event="click:startTimer"]').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        timerModal?.classList.remove('hidden');
+                    });
+                });
+                
+                document.querySelector('[data-event="click:closeTimer"]')?.addEventListener('click', () => {
+                    timerModal?.classList.add('hidden');
+                });
+                
+                // Task modal controls
+                document.querySelector('[data-event="click:createTask"]')?.addEventListener('click', () => {
+                    taskModal?.classList.remove('hidden');
+                });
+                
+                document.querySelectorAll('[data-event="click:closeTaskModal"]').forEach(button => {
+                    button.addEventListener('click', () => {
+                        taskModal?.classList.add('hidden');
+                    });
+                });
+                
+                // Close modals on backdrop click
+                [timerModal, taskModal].forEach(modal => {
+                    modal?.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            modal.classList.add('hidden');
+                        }
+                    });
+                });
+            }
+            
+            // Touch and interaction enhancements
+            function initializeTouchEnhancements() {
+                // Add touch feedback for buttons
+                document.addEventListener('touchstart', (e) => {
+                    if (e.target.closest('button, [role="button"]')) {
+                        e.target.closest('button, [role="button"]').style.transform = 'scale(0.98)';
+                    }
+                });
+                
+                document.addEventListener('touchend', (e) => {
+                    if (e.target.closest('button, [role="button"]')) {
+                        setTimeout(() => {
+                            e.target.closest('button, [role="button"]').style.transform = '';
+                        }, 100);
+                    }
+                });
+            }
+            
+            // Simulate some interactive features for demo
+            function initializeDemo() {
+                // Block interaction
+                document.querySelectorAll('[data-event="click:openBlock"]').forEach(block => {
+                    block.addEventListener('click', () => {
+                        console.log('Block clicked - would open detailed view');
+                    });
+                });
+                
+                // Task completion toggle
+                document.querySelectorAll('[data-event="click:toggleComplete"]').forEach(checkbox => {
+                    checkbox.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const taskItem = e.target.closest('[data-task-id]');
+                        taskItem?.classList.toggle('opacity-50');
+                        console.log('Task completion toggled');
+                    });
+                });
+                
+                // Form submission
+                document.querySelector('[data-event="submit:createTask"]')?.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    console.log('Task would be created with form data');
+                    document.getElementById('taskModal')?.classList.add('hidden');
+                });
+            }
+            
+            // PWA Service Worker Registration
+            function registerServiceWorker() {
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then((registration) => {
+                            console.log('SW registered: ', registration);
+                        })
+                        .catch((registrationError) => {
+                            console.log('SW registration failed: ', registrationError);
+                        });
+                }
+            }
+            
+            // Initialize all functionality
+            document.addEventListener('DOMContentLoaded', () => {
+                initializeDarkMode();
+                initializeModals();
+                initializeTouchEnhancements();
+                initializeDemo();
+                registerServiceWorker();
+                
+                // Add resize handler for responsive behavior
+                window.addEventListener('resize', () => {
+                    // Handle responsive layout changes
+                    console.log('Window resized - handle responsive layout');
+                });
+                
+                console.log('TimeBlock Pro initialized successfully');
+            });
+            
+        })();
+    </script>
+    
+    <!-- PWA Manifest -->
+    <script>
+        // Inline manifest for demo purposes
+        const manifest = {
+            "name": "TimeBlock Pro",
+            "short_name": "TimeBlock",
+            "description": "Personal productivity app with time blocking and task management",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#1F2937",
+            "theme_color": "#3B82F6",
+            "icons": [
+                {
+                    "src": "icon-192.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                },
+                {
+                    "src": "icon-512.png", 
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
+        };
+        
+        // Create and set manifest
+        const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(manifestBlob);
+        document.querySelector('link[rel="manifest"]')?.setAttribute('href', manifestURL);
+    </script>
+
+</body>
+</html>

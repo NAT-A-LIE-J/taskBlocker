@@ -1,9 +1,9 @@
-const CACHE_NAME = 'timeblock-pro-v1.0.0';
+const CACHE_NAME = 'timeblock-pro-v1.1.0';
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/manifest.json'
+  '/index.html',
+  '/manifest.json',
+  // Vite will inject asset paths during build
 ];
 
 // Install Service Worker
@@ -42,7 +42,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - Cache First with Network Fallback
+// Enhanced Fetch Strategy for Vite Assets
 self.addEventListener('fetch', (event) => {
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) {
@@ -54,43 +54,73 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        if (response) {
-          console.log('[SW] Found in cache:', event.request.url);
-          return response;
-        }
-        
-        console.log('[SW] Fetching from network:', event.request.url);
-        return fetch(event.request).then((response) => {
-          // Don't cache if not a valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          // Add to cache
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-
-          return response;
-        }).catch((error) => {
-          console.error('[SW] Fetch failed:', error);
-          // Return offline page or cached fallback if available
-          if (event.request.destination === 'document') {
-            return caches.match('/');
-          }
-          throw error;
-        });
-      })
-  );
+  // Handle different types of requests
+  if (event.request.destination === 'document') {
+    // HTML pages - Network first, then cache
+    event.respondWith(networkFirst(event.request));
+  } else if (event.request.url.includes('/assets/') || event.request.url.includes('.js') || event.request.url.includes('.css')) {
+    // Static assets - Cache first (they have hash names in Vite)
+    event.respondWith(cacheFirst(event.request));
+  } else {
+    // Everything else - Network first
+    event.respondWith(networkFirst(event.request));
+  }
 });
+
+// Cache First Strategy (for hashed assets)
+async function cacheFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  
+  if (cached) {
+    console.log('[SW] Found in cache:', request.url);
+    return cached;
+  }
+  
+  try {
+    console.log('[SW] Fetching from network:', request.url);
+    const response = await fetch(request);
+    
+    if (response.status === 200) {
+      cache.put(request, response.clone());
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('[SW] Fetch failed:', error);
+    throw error;
+  }
+}
+
+// Network First Strategy (for HTML and API calls)
+async function networkFirst(request) {
+  try {
+    console.log('[SW] Network first for:', request.url);
+    const response = await fetch(request);
+    
+    if (response.status === 200) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('[SW] Network failed, trying cache:', error);
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+    
+    if (cached) {
+      return cached;
+    }
+    
+    // Fallback to index.html for navigation requests
+    if (request.destination === 'document') {
+      return cache.match('/index.html') || cache.match('/');
+    }
+    
+    throw error;
+  }
+}
 
 // Background Sync for data backup
 self.addEventListener('sync', (event) => {
@@ -101,7 +131,7 @@ self.addEventListener('sync', (event) => {
       self.clients.matchAll().then((clients) => {
         clients.forEach((client) => {
           client.postMessage({
-            type: 'BACKUP_REQUESTED'
+            type: 'BACKUP_DATA_REQUEST'
           });
         });
       })
@@ -109,93 +139,11 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// Handle messages from main thread
+// Handle messages from the app
 self.addEventListener('message', (event) => {
-  console.log('[SW] Received message:', event.data);
+  console.log('[SW] Message received:', event.data);
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
-  if (event.data && event.data.type === 'REQUEST_UPDATE') {
-    self.registration.update();
-  }
 });
-
-// Notification handling (for timer completion)
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification click received:', event.notification.tag);
-  
-  event.notification.close();
-  
-  // Focus or open the app
-  event.waitUntil(
-    clients.matchAll({
-      type: 'window',
-      includeUncontrolled: true
-    }).then((clientList) => {
-      // If app is already open, focus it
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      
-      // If app is not open, open it
-      if (clients.openWindow) {
-        return clients.openWindow('/');
-      }
-    })
-  );
-});
-
-// Push notifications (for timer alerts)
-self.addEventListener('push', (event) => {
-  console.log('[SW] Push message received:', event);
-  
-  if (event.data) {
-    const data = event.data.json();
-    const options = {
-      body: data.body || 'Your focus session has completed!',
-      icon: '/manifest-icon-192.png',
-      badge: '/manifest-icon-96.png',
-      tag: data.tag || 'timer-complete',
-      actions: [
-        {
-          action: 'view',
-          title: 'View Tasks',
-          icon: '/action-view.png'
-        },
-        {
-          action: 'dismiss',
-          title: 'Dismiss',
-          icon: '/action-dismiss.png'
-        }
-      ],
-      requireInteraction: true,
-      vibrate: [200, 100, 200]
-    };
-    
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'TimeBlock Pro', options)
-    );
-  }
-});
-
-// Periodic background sync for automatic backups
-self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'weekly-backup') {
-    console.log('[SW] Performing weekly backup');
-    event.waitUntil(
-      self.clients.matchAll().then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({
-            type: 'WEEKLY_BACKUP_REQUESTED'
-          });
-        });
-      })
-    );
-  }
-});
-
-console.log('[SW] Service Worker loaded and ready');

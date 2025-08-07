@@ -1,13 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
-    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  
+  <!-- PWA Meta Tags -->
+  <meta name="description" content="Personal productivity app with persistent weekly calendar and dynamic todo list" />
+  <meta name="theme-color" content="#007AFF" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="TimeBlock Pro" />
+  
+  <!-- Prevent zoom on iPad -->
+  <meta name="format-detection" content="telephone=no" />
+  
+  <!-- Web App Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- Favicon and Apple Touch Icons -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzAwN0FGRiIvPgo8cGF0aCBkPSJNOCAxMkgxNk04IDI0SDE2TTggMThIMTYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxjaXJjbGUgY3g9IjIyIiBjeT0iMTgiIHI9IjYiIHN0cm9rZT0iIzM0Qzc1OSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CjxwYXRoIGQ9Ik0yMiAxNFYxOEwyNCAyMCIgc3Ryb2tlPSIjMzRDNzU5IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=" />
+  
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDE4MCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIiByeD0iMjAiIGZpbGw9IiMwMDdBRkYiLz4KPHN2ZyB4PSI0NSIgeT0iNDUiIHdpZHRoPSI5MCIgaGVpZ2h0PSI5MCIgdmlld0JveD0iMCAwIDkwIDkwIiBmaWxsPSJub25lIj4KPHJlY3QgeD0iMTUiIHk9IjMwIiB3aWR0aD0iNjAiIGhlaWdodD0iMzAiIHJ4PSI0IiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNMjQgNDJIMzZNMjQgNDhIMzZNMjQgNTRIMzYiIHN0cm9rZT0iIzAwN0FGRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPGNpcmNsZSBjeD0iNTciIGN5PSI0OCIgcj0iMTUiIHN0cm9rZT0iIzM0Qzc1OSIgc3Ryb2tlLXdpZHRoPSIzIiBmaWxsPSJub25lIi8+CjxwYXRoIGQ9Ik01NyAzOVY0OEw2MyA1NCIgc3Ryb2tlPSIjMzRDNzU5IiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4KPC9zdmc+Cg==" />
+  
+  <!-- iPad specific icons -->
+  <link rel="apple-touch-icon" sizes="152x152" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUyIiBoZWlnaHQ9IjE1MiIgdmlld0JveD0iMCAwIDE1MiAxNTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTIiIGhlaWdodD0iMTUyIiByeD0iMjAiIGZpbGw9IiMwMDdBRkYiLz4KPHN2ZyB4PSIzOCIgeT0iMzgiIHdpZHRoPSI3NiIgaGVpZ2h0PSI3NiIgdmlld0JveD0iMCAwIDc2IDc2IiBmaWxsPSJub25lIj4KPHJlY3QgeD0iMTIiIHk9IjI0IiB3aWR0aD0iNTIiIGhlaWdodD0iMjgiIHJ4PSI0IiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNMjAgMzJIMzBNMjAgNDBIMzBNMjAgNDhIMzAiIHN0cm9rZT0iIzAwN0FGRiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPGNpcmNsZSBjeD0iNDgiIGN5PSI0MCIgcj0iMTIiIHN0cm9rZT0iIzM0Qzc1OSIgc3Ryb2tlLXdpZHRoPSIyLjUiIGZpbGw9Im5vbmUiLz4KPHBhdGggZD0iTTQ4IDMyVjQwTDUyIDQ0IiBzdHJva2U9IiMzNEM3NTkiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+Cjwvc3ZnPgo=" />
+  
+  <!-- Microsoft Tiles -->
+  <meta name="msapplication-TileColor" content="#007AFF" />
+  <meta name="msapplication-config" content="none" />
+  
+  <title>TimeBlock Pro</title>
+  
+  <style>
+    /* Prevent flash of unstyled content */
+    body { 
+      margin: 0; 
+      padding: 0; 
+      background-color: #ffffff; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    /* Loading spinner */
+    .loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007AFF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Touch optimizations for iPad */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    input, textarea, [contenteditable] {
+      -webkit-user-select: auto;
+      user-select: auto;
+    }
+    
+    /* Prevent zoom on input focus */
+    input[type="text"], 
+    input[type="email"], 
+    input[type="password"], 
+    input[type="number"], 
+    input[type="tel"], 
+    input[type="url"], 
+    input[type="search"], 
+    textarea, 
+    select {
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="loading-screen">
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+  
+  <script type="module" src="/src/main.tsx"></script>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    // Register service worker in production
+    if ('serviceWorker' in navigator && !window.location.hostname.includes('localhost')) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('SW registered: ', registration);
+          })
+          .catch((registrationError) => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
+    }
+  </script>
+  
+  <!-- Development banner script - only in development -->
+  <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
+</body>
 </html>
