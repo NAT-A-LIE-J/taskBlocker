@@ -40,8 +40,8 @@ jobs:
         
     - name: Copy service worker to build output
       run: |
-        cp public/sw.js dist/public/sw.js
-        cp public/manifest.json dist/public/manifest.json
+        cp client/public/sw.js dist/public/sw.js
+        cp client/public/manifest.json dist/public/manifest.json
         
     - name: Setup GitHub Pages
       uses: actions/configure-pages@v4
