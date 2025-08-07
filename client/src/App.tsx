@@ -9,7 +9,10 @@ import NotFound from "@/pages/not-found";
 function Router() {
   return (
     <Switch>
+      {/* Handle all possible path variations */}
       <Route path="/" component={Home} />
+      <Route path="/taskBlocker/" component={Home} />
+      <Route path="/taskBlocker" component={Home} />
       <Route component={NotFound} />
     </Switch>
   );
